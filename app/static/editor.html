@@ -29,7 +29,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 .autoStatus.ok{border-color:#657d1b}.autoStatus.warn{border-color:#795f22}
 .advancedToggle{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0 10px}
 .advancedWrap{display:none}.advancedWrap.show{display:block}
-.resultBox{font-size:15px;line-height:1.7}
+.resultBox{font-size:15px;line-height:1.7}.projectHead{display:flex;justify-content:space-between;gap:18px;align-items:center}.projectActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.projectActions input,.projectActions select{width:auto;padding:9px}@media(max-width:800px){.projectHead{align-items:flex-start;flex-direction:column}.projectActions{width:100%}.projectActions input,.projectActions select{width:100%;max-width:none!important}}
 @media(max-width:800px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.seg{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}.quick h1{font-size:28px}}
 </style>
 </head>
@@ -39,7 +39,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div><div class="brand"><img src="/nahavideo-mark.svg" alt="" width="30" height="30"><span>NAHAVIDEO / AI DIRECTOR</span></div><div class="tag">Give us the footage. We handle the edit.</div></div>
   <div class="editorNav">
     <a class="homeLink" href="/" title="Return to NahaVideo home">← Home</a>
-    <div class="muted">v0.41</div>
+    <div class="muted">v0.43</div>
   </div>
 </div>
 
@@ -86,6 +86,10 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div><b>Advanced Director controls</b><div class="metric">Optional. Use these when you want to inspect or manually edit the production.</div></div>
   <button class="secondary" onclick="toggleAdvanced()" id="advancedBtn">Show advanced controls</button>
 </div>
+<section class="panel wide projectPanel">
+  <div class="projectHead"><div><h2 style="margin:0">Project</h2><div class="metric">Save the current Director state so the edit can be resumed after a restart.</div></div><div class="projectActions"><input id="projectName" placeholder="Project name" style="max-width:260px"><button class="secondary" onclick="saveProject()">Save Project</button><select id="projectList" style="max-width:260px"><option value="">Load saved project…</option></select><button class="secondary" onclick="loadSelectedProject()">Load</button></div></div>
+  <div id="projectStatus" class="status"></div>
+</section>
 <div id="advancedWrap" class="advancedWrap">
 <div class="grid">
 <section class="panel">
@@ -178,7 +182,56 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <script>
 let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null,quickMusicFile=null,quickLogoFile=null;
 
-function renderRationale(){const box=$('rationale');if(!box)return;const rows=plan?.edit_rationale||[];box.innerHTML=rows.length?rows.map(x=>'<div class="clip"><div class="clipTop"><b>'+escapeHtml(x.decision||'Director decision')+'</b><span class="badge ai">'+escapeHtml(x.confidence||'heuristic')+'</span></div><div class="metric">'+escapeHtml(x.why||'')+'</div></div>').join(''):'No rationale available yet.';}\n\nfunction toggleAdvanced(){
+function renderRationale(){const box=$('rationale');if(!box)return;const rows=plan?.edit_rationale||[];box.innerHTML=rows.length?rows.map(x=>'<div class="clip"><div class="clipTop"><b>'+escapeHtml(x.decision||'Director decision')+'</b><span class="badge ai">'+escapeHtml(x.confidence||'heuristic')+'</span></div><div class="metric">'+escapeHtml(x.why||'')+'</div></div>').join(''):'No rationale available yet.';}\n\nasync function saveProject(){
+  if(!plan){$('projectStatus').textContent='Build a Director plan before saving.';return;}
+  const name=$('projectName').value.trim()||'NahaVideo project';
+  $('projectStatus').textContent='Saving…';
+  const r=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    name, prompt:$('prompt').value, plan,
+    clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
+    stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
+    music_id:musicId, logo_id:logoId, platforms:selectedPlatforms(),
+    clips, stock_assets:stockAssets, creative_brief:creativeBrief, creative_direction:creativeDirection,
+    command:$('command').value
+  })});
+  const data=await r.json();
+  if(!r.ok){$('projectStatus').textContent=data.detail||'Could not save project';return;}
+  $('projectName').value=data.project.name;
+  $('projectStatus').textContent='Saved · '+data.project.id;
+  await refreshProjects();
+}
+
+async function refreshProjects(){
+  try{
+    const r=await fetch('/api/projects');
+    const data=await r.json();
+    $('projectList').innerHTML='<option value="">Load saved project…</option>'+((data.projects||[]).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · '+esc(x.saved_at||'')+'</option>').join(''));
+  }catch(e){}
+}
+
+async function loadSelectedProject(){
+  const id=$('projectList').value;
+  if(!id)return;
+  const r=await fetch('/api/projects/'+encodeURIComponent(id));
+  const data=await r.json();
+  if(!r.ok){$('projectStatus').textContent=data.detail||'Could not load project';return;}
+  clips=data.clips||[];
+  stockAssets=data.stock_assets||[];
+  plan=data.plan||null;
+  musicId=data.music_id||null;
+  logoId=data.logo_id||null;
+  creativeBrief=data.creative_brief||null;
+  creativeDirection=data.creative_direction||null;
+  $('projectName').value=data.name||data.id||'';
+  $('prompt').value=data.prompt||$('prompt').value;
+  $('command').value=data.command||$('command').value;
+  renderClipList();renderStockAssets();
+  if(plan){renderPlan();renderRationale();}
+  $('renderBtn').disabled=!plan;$('packBtn').disabled=!plan;$('variantsBtn').disabled=!plan;
+  $('projectStatus').textContent='Loaded · '+(data.name||data.id);
+}
+
+function toggleAdvanced(){
   const wrap=$('advancedWrap'),btn=$('advancedBtn');
   wrap.classList.toggle('show');
   btn.textContent=wrap.classList.contains('show')?'Hide advanced controls':'Show advanced controls';
@@ -646,5 +699,5 @@ async function renderPack(automatic=false){
 <script>
 (async()=>{try{const r=await fetch('/api/health');const d=await r.json();window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled)}catch(e){window.NAHAVIDEO_JEV_ENABLED=false}})();
 </script>
-</body>
+<script>refreshProjects();</script></body>
 </html>
