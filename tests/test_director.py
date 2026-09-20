@@ -19,7 +19,7 @@ def test_plan_is_30_seconds():
     )
     assert plan["settings"]["priority"] == "food"
     assert plan["settings"]["logo_ending"] is True
-    assert plan["version"] == "0.9"
+    assert plan["version"] == "0.10"
     assert plan["edit_decision_graph"]
     assert plan["timeline"]
 
@@ -218,3 +218,39 @@ def test_storyboard_uses_timeline_creative_intent():
     beats = build_storyboard(plan)
     assert [b["creative_intent"] for b in beats] == ["hero_food", "cta"]
     assert beats[1]["intent_fit"] == 0.84
+
+
+
+def test_footage_gap_detector_flags_missing_required_cta():
+    from app.gaps import detect_footage_gaps
+    out = detect_footage_gaps(
+        {"category": "restaurant", "shot_requirements": [
+            {"beat": "hook", "need": "hero food", "priority": "required"},
+            {"beat": "cta", "need": "restaurant exterior", "priority": "required"},
+        ]},
+        {"selected": {"shot_sequence": ["hero_food", "cta"]}},
+        [{"type": "clip", "enabled": True, "creative_intent": "hero_food"}],
+        [{"filename": "dish.mp4", "analysis": {"semantic": {"labels": {"food": 0.9}}}}],
+    )
+    assert out["status"] == "gaps_detected"
+    assert out["required_gap_count"] == 1
+    assert out["gaps"][0]["beat"] == "cta"
+    assert "exterior" in out["gaps"][0]["search_hint"]
+
+
+def test_footage_gap_detector_reports_covered_beats():
+    from app.gaps import detect_footage_gaps
+    out = detect_footage_gaps(
+        {"category": "restaurant", "shot_requirements": [
+            {"beat": "hook", "need": "hero food", "priority": "required"},
+            {"beat": "cta", "need": "restaurant exterior", "priority": "required"},
+        ]},
+        {"selected": {"shot_sequence": ["hero_food", "cta"]}},
+        [
+            {"type": "clip", "enabled": True, "creative_intent": "hero_food"},
+            {"type": "clip", "enabled": True, "creative_intent": "cta"},
+        ],
+        [{"filename": "dish.mp4", "analysis": {"semantic": {"labels": {"food": 0.9, "exterior": 0.8}}}}],
+    )
+    assert out["status"] == "ready"
+    assert out["gap_count"] == 0
