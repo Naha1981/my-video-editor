@@ -215,7 +215,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.3",
+        "version": "0.5",
         "prompt": prompt,
         "settings": settings,
         "shots_ranked": [
@@ -239,9 +239,9 @@ def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
         },
         "branding": {"logo_id": None},
         "notes": [
-            "v0.3 combines deterministic media signals with optional local Whisper/OpenCLIP intelligence.",
+            "v0.5 combines local media intelligence with a website-to-creative-brief intake layer.",
             "Model adapters are optional; the CPU-only heuristic path remains usable without model downloads.",
-            "Timeline entries are intentionally editable before rendering.",
+            "Timeline entries are intentionally editable before rendering; derived captions/storyboard are rebuilt from the edited timeline.",
         ],
     }
 
