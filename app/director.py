@@ -181,6 +181,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
             "duration": round(seg, 3),
             "score": item["score"],
             "reasons": item["reasons"],
+            "speech_ranges_source": (clip.analysis or {}).get("transcript", {}).get("speech_ranges", []),
         }
         timeline.append(timeline_item)
         duck_ranges.extend(_mapped_duck_ranges(timeline_item, clip, output_offset))
@@ -277,4 +278,26 @@ def sanitize_plan(plan: dict[str, Any], allowed_clip_ids: set[str], target_durat
             break
     clean["timeline"] = timeline
     clean["unfilled_seconds"] = round(max(0.0, limit - total), 3)
+
+    duck_ranges: list[list[float]] = []
+    output_offset = 0.0
+    for item in timeline:
+        if item.get("type") == "clip":
+            source_start = float(item.get("source_start", 0))
+            duration = float(item.get("duration", 0))
+            source_end = source_start + duration
+            for start, end in item.get("speech_ranges_source", [])[:200]:
+                overlap_start = max(float(start), source_start)
+                overlap_end = min(float(end), source_end)
+                if overlap_end - overlap_start >= 0.12:
+                    duck_ranges.append([
+                        round(output_offset + overlap_start - source_start, 3),
+                        round(output_offset + overlap_end - source_start, 3),
+                    ])
+        output_offset += float(item.get("duration", 0))
+
+    audio = dict(clean.get("audio", {}))
+    audio["duck_ranges"] = duck_ranges
+    audio["duck_mode"] = "transcript_ranges" if duck_ranges else "sidechain_fallback"
+    clean["audio"] = audio
     return clean
