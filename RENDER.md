@@ -67,8 +67,8 @@ Jev is not installed into the NahaVideo renderer.
 - `NAHALLM_API_KEY=<per-app NahaLLM key>`
 - `NAHALLM_TIMEOUT_SECONDS=45`
 - `JEV_ENABLED=1`
-- `JEV_WORKER_URL=https://<jev-worker-service>.onrender.com`
-- `JEV_WORKER_API_KEY=<jev-worker-key>`
+- `JEV_WORKER_URL=https://<jev_worker-service>.onrender.com`
+- `JEV_WORKER_API_KEY=<jev_worker-key>`
 - `JEV_ALLOWED_DOMAINS=<approved domains, comma-separated>`
 - `JEV_TIMEOUT_SECONDS=240`
 
@@ -91,7 +91,7 @@ The NahaVideo service receives only its application NahaLLM key.
 Create another Render Web Service from this repository using:
 
 - Runtime: Docker
-- Dockerfile Path: `jev-worker/Dockerfile`
+- Dockerfile Path: `jev_worker/Dockerfile`
 - Docker Build Context: repository root
 
 Required:
