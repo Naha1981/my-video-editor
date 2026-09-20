@@ -86,6 +86,17 @@ Required provider secrets stay in NahaLLM only:
 
 The NahaVideo service receives only its application NahaLLM key.
 
+### Automatic asset collection
+
+For public media collection, configure the NahaVideo service with:
+
+- `NAHAVIDEO_ASSET_MAX_BYTES=83886080`
+- `NAHAVIDEO_ASSET_ALLOWED_DOMAINS=<approved CDN/provider domains, comma-separated>`
+
+Only HTTP(S) media on the source domain or explicitly allowlisted domains can be collected. Private/local/reserved destinations are blocked. Downloaded stock video is always marked pending until provenance/license is approved.
+
+To enable automatic stock searches when a Director gap exists, Jev must be enabled and the operator can use **Find missing stock/B-roll automatically** in the UI.
+
 ### Jev Browser Worker
 
 Create another Render Web Service from this repository using:
