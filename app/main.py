@@ -23,6 +23,7 @@ from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack, validate_final_plan, build_delivery_manifest
 from .variants import render_variants
+from .rationale import build_edit_rationale
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
@@ -404,6 +405,7 @@ def plan(req: PlanRequest):
     result["naha_context"] = naha_context
     result["storyboard"] = build_storyboard(result)
     result = add_transcript_captions(result)
+    result["edit_rationale"] = build_edit_rationale(result)
     music_path = _find_media(req.music_id) if req.music_id else None
     result["audio"]["background_music"] = bool(music_path)
     if music_path:
