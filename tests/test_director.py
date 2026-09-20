@@ -19,7 +19,7 @@ def test_plan_is_30_seconds():
     )
     assert plan["settings"]["priority"] == "food"
     assert plan["settings"]["logo_ending"] is True
-    assert plan["version"] == "0.17"
+    assert plan["version"] == "0.19"
     assert plan["edit_decision_graph"]
     assert plan["timeline"]
 
@@ -283,3 +283,22 @@ def test_pending_stock_is_not_selected_by_story_sequence():
         max_per_clip=3,
     )
     assert timeline[0]["clip_id"] == "food"
+
+
+def test_creative_direction_uses_nahalabs_objective_and_authenticity():
+    from app.creative import creative_direction
+    out = creative_direction(
+        {"category": "business", "cta": "Book a demo"},
+        "premium enterprise video",
+        {
+            "product": "cargoiq",
+            "objective": "lead_gen",
+            "lane": "enterprise_intelligence",
+            "authenticity_profile": "nahalabs-authentic",
+            "operating_loop": ["find", "understand", "act", "learn"],
+        },
+    )
+    assert out["objective"] == "lead_gen"
+    assert out["product"] == "cargoiq"
+    assert "NahaLabs Authenticity" in out["creative_rule"]
+    assert out["operating_loop"] == ["find", "understand", "act", "learn"]
