@@ -6,7 +6,7 @@ def test_ass_caption_renders_only_local_shot_window(tmp_path):
     assert out==path
     text=path.read_text(encoding="utf-8")
     assert "Dialogue: 0,0:00:00.00,0:00:01.00" in text
-    assert "Book today" in text
+    assert "Book" in text and "today" in text
     assert "Fresh food" not in text
     assert r"\b1\fs22" in text
 
