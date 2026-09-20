@@ -300,3 +300,9 @@ NahaVideo Web Service
 - Caption metadata now considers creative intent, caption hierarchy, duration and nearby music beats.
 - Hero/CTA statements receive accent rhythm; captions near musical beats can align visually; very short captions are marked quick.
 - Rhythm decisions remain deterministic and explainable; spoken content is never rewritten.
+
+
+## v0.38 — Explainable Director + Product Landing Page
+- Added an edit-rationale layer explaining major shot/brand decisions with evidence and confidence.
+- Preserved the full production workspace at /editor.html.
+- Rebuilt / as a cinematic NahaVideo product landing page with an animated, editor-like product hero, active timeline, Director telemetry, workflow narrative and responsive motion.
