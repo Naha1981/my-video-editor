@@ -45,9 +45,20 @@ def caption_emphasis(text: str) -> list[str]:
     return [word for word in words if word.lower() in EMPHASIS_WORDS]
 
 
+def caption_style(text: str, emphasis: list[str] | None = None) -> str:
+    """Choose restrained visual hierarchy from message content, not animation noise."""
+    words = re.findall(r"\\S+", str(text or "").strip())
+    emphasized = emphasis if emphasis is not None else caption_emphasis(text)
+    if len(words) <= 4 and emphasized:
+        return "hero"
+    if emphasized:
+        return "emphasis"
+    return "normal"
+
+
 def enrich_caption(cap: dict[str, Any]) -> dict[str, Any]:
     out = dict(cap)
     emphasis = caption_emphasis(out.get("text", ""))
     out["emphasis"] = emphasis
-    out["style"] = "emphasis" if emphasis else "normal"
+    out["style"] = caption_style(out.get("text", ""), emphasis)
     return out
