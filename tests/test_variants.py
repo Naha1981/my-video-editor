@@ -42,3 +42,9 @@ def test_render_variants_accepts_timeline_for_per_shot_reframing(tmp_path):
     )
     assert out["reframing"] == "per-shot"
     assert calls == [0.05, 2.05]
+
+
+def test_caption_safe_zones_differ_by_aspect():
+    from app.variants import caption_safe_zone
+    assert caption_safe_zone("9:16")["margin_v"] > caption_safe_zone("16:9")["margin_v"]
+    assert caption_safe_zone("1:1")["font_size"] != caption_safe_zone("16:9")["font_size"]
