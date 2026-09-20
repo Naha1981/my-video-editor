@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: nahavideo-ai-director
+    runtime: docker
+    repo: https://github.com/Naha1981/my-video-editor
+    branch: main
+    plan: free
+    autoDeployTrigger: commit
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: NAHAVIDEO_ENABLE_TRANSCRIBE
+        value: "0"
+      - key: NAHAVIDEO_ENABLE_VISION
+        value: "0"
