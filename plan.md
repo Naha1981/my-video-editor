@@ -85,3 +85,9 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Required gaps such as missing CTA/exterior footage are surfaced explicitly instead of being silently substituted.
 - Each missing beat includes a practical stock/B-roll search hint and semantic intent-fit evidence.
 - Plan API exposes `footage_gaps`; the UI surfaces required gaps before rendering.
+
+
+## v0.11 — Beat-aware Pacing
+- Added a deterministic pacing allocator that assigns screen time by creative beat and requested pace.
+- Energetic ads keep hook/CTA and supporting cuts tight; balanced ads allow experience/proof beats more room.
+- Pacing respects the requested total duration and existing per-clip limits.
