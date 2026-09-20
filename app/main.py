@@ -468,16 +468,27 @@ def delivery_manifest(req: RenderRequest):
 
 @app.post("/api/variants")
 def variants(req: RenderRequest):
-    qa = final_qa(req)
+    requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
+    clips = {cid: _find_media(cid) for cid in requested_ids}
+    clips = {k: v for k, v in clips.items() if v}
+    if not clips:
+        raise HTTPException(404, "No clips found")
+    qa = validate_final_plan(req.plan, clips, approved_stock_ids=set(req.stock_asset_ids))
     if qa.get("status") == "blocked":
         raise HTTPException(400, {"message": "Final QA blocks variant rendering", "qa": qa})
-    # Reuse the already-rendered base output when available; otherwise require the normal render flow.
-    base = MEDIA / "rendered.mp4"
-    if not base.exists():
-        raise HTTPException(400, "Render the approved base video first")
-    formats = ["9:16", "1:1", "16:9"]
-    return render_variants(base, MEDIA / "variants", formats)
-
+    music = _find_media(req.music_id) if req.music_id else None
+    logo = _find_media(req.logo_id) if req.logo_id else None
+    clean_plan = sanitize_plan(req.plan, set(clips.keys()), float(req.plan.get("settings", {}).get("duration", 180)))
+    clean_plan["storyboard"] = build_storyboard(clean_plan)
+    clean_plan = add_transcript_captions(clean_plan)
+    rid = uuid4().hex[:12]
+    base = MEDIA / f"nahavideo_variants_base_{rid}.mp4"
+    try:
+        render(MEDIA, clean_plan, clips, base, music, logo, captions=req.captions)
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+    result = render_variants(base, MEDIA / f"variants_{rid}", ["9:16", "1:1", "16:9"])
+    return {"id": rid, "qa": qa, "variants": result, "base_download": f"/api/variants/{rid}/base"}
 
 @app.post("/api/render")
 def render_video(req: RenderRequest):
@@ -565,6 +576,24 @@ def download_pack_platform(rid: str, platform: str):
     path = MEDIA / f"delivery_{rid}" / f"nahavideo_pack_base_{rid}_{key}.mp4"
     if not path.exists():
         raise HTTPException(404, "Platform render not found")
+    return FileResponse(path, media_type="video/mp4", filename=path.name)
+
+
+@app.get("/api/render/{rid}")
+def download_variant_base(rid: str):
+    path = MEDIA / f"nahavideo_variants_base_{rid}.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Variant base render not found")
+    return FileResponse(path, media_type="video/mp4", filename=path.name)
+
+
+@app.get("/api/variants/{rid}/{aspect}")
+def download_variant(rid: str, aspect: str):
+    if aspect not in {"9x16", "1x1", "16x9"}:
+        raise HTTPException(400, "Unsupported variant aspect")
+    path = MEDIA / f"variants_{rid}" / f"nahavideo_variants_base_{rid}_{aspect}.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Variant not found")
     return FileResponse(path, media_type="video/mp4", filename=path.name)
 
 
