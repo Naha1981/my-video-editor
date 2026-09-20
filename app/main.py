@@ -10,12 +10,14 @@ from pydantic import BaseModel
 from .media import ffprobe, analyze_media, render
 from .director import Clip, build_plan, sanitize_plan
 from .storyboard import build_storyboard, add_transcript_captions
+from .brief import fetch_brand, compile_creative_brief
+from .stock import shot_requirements
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.3.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.5.0")
 
 
 class PlanRequest(BaseModel):
@@ -31,6 +33,12 @@ class RenderRequest(BaseModel):
     clip_ids: list[str]
     music_id: str | None = None
     logo_id: str | None = None
+    captions: bool = True
+
+
+class BriefRequest(BaseModel):
+    url: str
+    prompt: str = ""
 
 
 def _find_media(mid: str):
@@ -40,7 +48,18 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.3.0"}
+    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.5.0"}
+
+
+@app.post("/api/brief-from-url")
+def brief_from_url(req: BriefRequest):
+    try:
+        site = fetch_brand(req.url)
+        creative = compile_creative_brief(site, req.prompt)
+        creative["shot_requirements"] = shot_requirements(creative)
+        return {"site": site, "creative_brief": creative}
+    except Exception as e:
+        raise HTTPException(400, f"Website intake failed: {e}")
 
 
 @app.post("/api/upload")
@@ -111,6 +130,8 @@ def plan(req: PlanRequest):
             meta["height"], meta["fps"], analysis
         ))
     result = build_plan(clips, req.prompt, req.duration)
+    result["storyboard"] = build_storyboard(result)
+    result = add_transcript_captions(result)
     result["audio"]["background_music"] = bool(req.music_id and _find_media(req.music_id))
     result["audio"]["music_id"] = req.music_id
     result["branding"]["logo_id"] = req.logo_id if req.logo_id and _find_media(req.logo_id) else None
@@ -133,7 +154,7 @@ def render_video(req: RenderRequest):
     rid = uuid4().hex[:12]
     output = MEDIA / f"nahavideo_{rid}.mp4"
     try:
-        render(MEDIA, clean_plan, clips, output, music, logo)
+        render(MEDIA, clean_plan, clips, output, music, logo, captions=req.captions)
     except Exception as e:
         raise HTTPException(500, str(e))
     return {"id": rid, "download": f"/api/render/{rid}", "plan": clean_plan}
