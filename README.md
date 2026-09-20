@@ -28,3 +28,19 @@ Current milestone: v0.2 foundation.
 ## Status
 
 See `plan.md` for the implementation roadmap.
+
+## v0.3 AI Director
+
+The editor now has a model-optional intelligence layer:
+
+- deterministic frame/audio analysis remains the default CPU-friendly path
+- optional local faster-whisper adds timestamped speech/word intelligence
+- optional local OpenCLIP adds zero-shot semantic shot relevance
+- the Director emits an explainable edit decision graph
+- the browser timeline can reorder, trim, remove and restore decisions before render
+- transcript-aware music ducking is recalculated after timeline edits
+- a supplied NahaLabs logo can be composited into the end card
+
+### Optional model setup
+
+Install `requirements-models.txt`, then enable the adapters with environment variables documented in `plan.md`.
