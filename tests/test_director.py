@@ -161,3 +161,11 @@ def test_semantic_label_can_match_creative_intent():
     score,reasons=score_clip(clip,{"priority":"visual_story"},{"selected":{"shot_sequence":["experience","cta"]}})
     assert score > 50
     assert any("AI experience relevance" in x for x in reasons)
+
+
+def test_shot_intelligence_builds_explainable_tags():
+    from app.shot_intelligence import classify_shot, intent_fit
+    analysis={"semantic":{"labels":{"food":0.82,"experience":0.18}},"hero_time":1.2}
+    info=classify_shot(analysis)
+    assert "food" in info["tags"] and "hero_candidate" in info["tags"]
+    assert intent_fit(analysis,"hero_food") == 0.82
