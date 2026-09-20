@@ -145,3 +145,11 @@ The website intake is intentionally deterministic and local-first. It does not c
 - The UI now supports attaching a downloaded stock clip, recording provenance and rebuilding the plan with the new asset.
 - Media lookup ignores provenance sidecars so metadata files can never be rendered as video.
 - Next media-execution layer: formal FFmpeg Skill adapter for probe → edit → verify without replacing the NahaVideo Director.
+
+
+## v0.18 — Optional FFmpeg Skill Execution / QA Adapter
+- Added a dependency-light adapter that discovers an installed ffmpeg-skill locally through the NAHAVIDEO_FFMPEG_SKILL_HOME environment variable, the standard Claude skill path, or local project folders.
+- The adapter never invokes a shell; it calls the skill's typed Python tools directly.
+- Rendered outputs can now be probed with probe.py and checked against a delivery platform with check.py.
+- If the skill is unavailable, NahaVideo keeps using its native FFmpeg renderer and reports that fallback explicitly.
+- The Director remains the creative brain; ffmpeg-skill is an optional deterministic execution/verification layer.
