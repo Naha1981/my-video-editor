@@ -130,10 +130,12 @@ def render_variants(
         work = output_dir / f"{slug}_parts"
         work.mkdir(exist_ok=True)
         if segments:
-            focal_plan = [
-                focal_point(source, cursor + min(0.05, max(0.05, float(item.get("duration", 0) or 0)) / 2))
-                for item in segments
-            ]
+            focal_plan = []
+            focal_cursor = 0.0
+            for item in segments:
+                dur = max(0.05, float(item.get("duration", 0) or 0))
+                focal_plan.append(focal_point(source, focal_cursor + min(0.05, dur / 2)))
+                focal_cursor += dur
             cursor = 0.0
             for i, item in enumerate(segments):
                 duration = max(0.05, float(item.get("duration", 0) or 0))
