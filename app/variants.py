@@ -79,7 +79,10 @@ def render_variants(
                 results.append({"aspect": aspect, "width": width, "height": height, "output": None, "status": "failed", "error": err, "focal": focal_records})
         if part_paths:
             concat = work / "concat.txt"
-            concat.write_text("\n".join(f"file '{p.as_posix().replace("'", "'\\''")}'" for p in part_paths), encoding="utf-8")
+            def _concat_line(p: Path) -> str:
+                safe = p.as_posix().replace("'", "'\\''")
+                return f"file '{safe}'"
+            concat.write_text("\n".join(_concat_line(p) for p in part_paths), encoding="utf-8")
             ok, err = _run([
                 "ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
                 "-i", str(concat), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
