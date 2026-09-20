@@ -17,6 +17,7 @@ from .gaps import detect_footage_gaps
 from .beats import detect_beats
 from .pacing import align_cut_boundaries
 from .motion import render_brand_card
+from .stock_search import build_stock_manifest
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -168,6 +169,7 @@ def plan(req: PlanRequest):
         brief, direction, result["timeline"],
         [{"filename": c.filename, "analysis": c.analysis or {}} for c in clips],
     )
+    result["stock_manifest"] = build_stock_manifest(result["footage_gaps"].get("gaps", []))
     return result
 
 
