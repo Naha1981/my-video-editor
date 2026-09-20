@@ -38,3 +38,18 @@ def test_final_qa_passes_clean_native_timeline(tmp_path):
         approved_stock_ids=set(),
     )
     assert out["status"] == "ready"
+
+
+def test_delivery_manifest_records_sha256(tmp_path):
+    from app.delivery import build_delivery_manifest
+    source = tmp_path / "food.mp4"
+    source.write_bytes(b"manifest-test")
+    out = build_delivery_manifest(
+        {"version": "0.27", "timeline": [{"type": "clip", "clip_id": "a", "duration": 2, "creative_intent": "hero_food"}]},
+        {"a": source},
+        qa={"status": "ready"},
+        platforms=["reels"],
+    )
+    assert out["manifest_version"] == "1.0"
+    assert out["sources"][0]["sha256"]
+    assert out["sources"][0]["filename"] == "food.mp4"
