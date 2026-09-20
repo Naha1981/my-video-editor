@@ -241,3 +241,10 @@ NahaVideo Web Service
 - Added `/api/final-qa` and a visible Final QA panel.
 - QA produces explicit pass/block states rather than silently rendering an unsafe plan.
 - Cobalt remains an acquisition layer; approval and provenance remain mandatory.
+
+
+## v0.27 — Auditable Delivery Manifest
+- Added a deterministic delivery manifest for the exact Director plan submitted to delivery.
+- Records plan/version, creative direction, NahaLabs context, timeline, source assets, stock provenance, music/logo references, footage gaps and Final QA state.
+- Source video files receive SHA-256 checksums so the delivered edit can be traced back to exact media bytes.
+- Added /api/delivery-manifest and UI access from Final QA.
