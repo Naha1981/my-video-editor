@@ -257,7 +257,7 @@ def build_plan(
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.20",
+        "version": "0.23",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
