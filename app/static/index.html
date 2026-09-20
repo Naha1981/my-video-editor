@@ -20,16 +20,69 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 .seg.off{opacity:.45}.logo{background:#353d46}.controls{display:flex;gap:5px;flex-wrap:wrap}.controls button{margin-top:0;padding:6px 9px;font-size:12px}
 .pills{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 7px;color:var(--muted)}
 .success{color:var(--accent)}.dangerText{color:var(--danger)}a{color:var(--accent)}
-@media(max-width:800px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.seg{grid-template-columns:1fr}}
+.quick{background:linear-gradient(180deg,#151a1f,#12161a);border:1px solid #39434c}
+.quick h1{font-size:34px;line-height:1.1;margin:0 0 8px}.quick .sub{color:var(--muted);font-size:16px;margin-bottom:18px}
+.quickGrid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}.field{display:grid;gap:6px}.field label{font-size:12px;color:var(--muted)}
+.primaryAction{width:100%;font-size:17px;padding:14px 18px;margin-top:4px}
+.autoStatus{padding:10px 12px;border-radius:10px;background:#0d1115;border:1px solid var(--line);min-height:22px}
+.autoStatus.ok{border-color:#657d1b}.autoStatus.warn{border-color:#795f22}
+.advancedToggle{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0 10px}
+.advancedWrap{display:none}.advancedWrap.show{display:block}
+.resultBox{font-size:15px;line-height:1.7}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.seg{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}.quick h1{font-size:28px}}
 </style>
 </head>
 <body>
 <main>
 <div class="top">
-  <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Local-first creative editing engine</div></div>
-  <div class="muted">v0.20</div>
+  <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
+  <div class="muted">v0.23</div>
 </div>
 
+<section class="panel wide quick">
+  <h1>Create your video</h1>
+  <div class="sub">Upload the footage and tell NahaVideo what the video should achieve. The Director handles the research, edit plan, missing B-roll and rendering for you.</div>
+  <div class="quickGrid">
+    <div class="field">
+      <label>YOUR FOOTAGE</label>
+      <input id="quickFiles" type="file" accept="video/*" multiple>
+    </div>
+    <div class="field">
+      <label>CLIENT WEBSITE (optional)</label>
+      <input id="quickWebsite" placeholder="https://client.co.za">
+    </div>
+    <div class="field">
+      <label>WHAT SHOULD THIS VIDEO ACHIEVE?</label>
+      <textarea id="quickGoal" style="min-height:110px">Create a 30-second premium advertisement. Start with the strongest shot, remove dead time, keep the pacing energetic, show the experience and finish with the brand call-to-action.</textarea>
+    </div>
+    <div class="field">
+      <label>FORMAT</label>
+      <select id="quickFormat">
+        <option value="reels">Instagram Reels</option>
+        <option value="tiktok">TikTok</option>
+        <option value="shorts">YouTube Shorts</option>
+        <option value="vertical_pack">Reels + TikTok + Shorts</option>
+        <option value="youtube">YouTube</option>
+        <option value="social_pack">Reels + TikTok + Shorts + Facebook</option>
+      </select>
+      <label style="margin-top:4px">MUSIC (optional)</label>
+      <input id="quickMusic" type="file" accept="audio/*">
+      <label style="margin-top:4px">LOGO (optional)</label>
+      <input id="quickLogo" type="file" accept="image/png,image/jpeg,image/webp">
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <button class="primaryAction" id="createVideoBtn" onclick="createVideo()">Create video</button>
+  </div>
+  <div id="autoStatus" class="autoStatus" style="margin-top:12px">Ready. NahaVideo will handle the production steps automatically.</div>
+  <div id="autoResult" class="resultBox" style="margin-top:10px"></div>
+</section>
+
+<div class="advancedToggle">
+  <div><b>Advanced Director controls</b><div class="metric">Optional. Use these when you want to inspect or manually edit the production.</div></div>
+  <button class="secondary" onclick="toggleAdvanced()" id="advancedBtn">Show advanced controls</button>
+</div>
+<div id="advancedWrap" class="advancedWrap">
 <div class="grid">
 <section class="panel">
   <h2>1. Footage</h2>
@@ -93,10 +146,106 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div id="result" class="status"></div>
 </section>
 </div>
+</div>
 </main>
 
 <script>
-let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null;
+let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null,quickMusicFile=null,quickLogoFile=null;
+
+function toggleAdvanced(){
+  const wrap=$('advancedWrap'),btn=$('advancedBtn');
+  wrap.classList.toggle('show');
+  btn.textContent=wrap.classList.contains('show')?'Hide advanced controls':'Show advanced controls';
+}
+
+function setQuickStatus(message, type=''){
+  $('autoStatus').className='autoStatus'+(type?' '+type:'');
+  $('autoStatus').textContent=message;
+}
+
+function selectedQuickPlatforms(){
+  const value=$('quickFormat').value;
+  const map={
+    reels:['reels'],
+    tiktok:['tiktok'],
+    shorts:['shorts'],
+    vertical_pack:['reels','tiktok','shorts'],
+    youtube:['youtube'],
+    social_pack:['reels','tiktok','shorts','facebook']
+  };
+  return map[value]||['reels'];
+}
+
+function applyQuickPlatforms(){
+  const wanted=new Set(selectedQuickPlatforms());
+  document.querySelectorAll('.platformBox').forEach(box=>box.checked=wanted.has(box.value));
+}
+
+async function createVideo(){
+  const files=[...$('quickFiles').files];
+  const website=$('quickWebsite').value.trim();
+  const goal=$('quickGoal').value.trim();
+  if(!files.length){setQuickStatus('Add at least one video clip to begin.','warn');return;}
+
+  $('createVideoBtn').disabled=true;
+  $('autoResult').innerHTML='';
+  clips=[];stockAssets=[];plan=null;musicId=null;logoId=null;
+  quickMusicFile=$('quickMusic').files[0]||null;
+  quickLogoFile=$('quickLogo').files[0]||null;
+  $('files').value='';
+  $('siteUrl').value=website;
+  $('prompt').value=goal;
+  applyQuickPlatforms();
+
+  try{
+    setQuickStatus('1/4 — Analysing your footage…');
+    await uploadFiles(files);
+
+    if(website){
+      setQuickStatus('2/4 — Understanding the client and finding useful brand assets…');
+      await loadBrief();
+    }else{
+      setQuickStatus('2/4 — Preparing the creative direction…');
+    }
+
+    setQuickStatus('3/4 — Director is building the story and checking for missing footage…');
+    await makePlan();
+
+    let stockData=null;
+    if(plan?.footage_gaps?.gap_count && JevStatusEnabled()){
+      setQuickStatus('3/4 — Finding missing B-roll automatically…');
+      stockData=await scoutMissingStock(true);
+    }
+
+    setQuickStatus('4/4 — Rendering your finished video…');
+    await renderPack();
+
+    const pending=stockAssets.filter(x=>!x.approved).length;
+    if(pending){
+      setQuickStatus('Draft ready. NahaVideo also found '+pending+' stock suggestion(s) that need a quick approval before they can be added.', 'warn');
+      $('autoResult').innerHTML='<span class="success">Your first draft is ready.</span> '+($('result').innerHTML||'')+
+        '<br><button class="secondary" onclick="showStockReview()">Review suggested footage</button>';
+    }else{
+      setQuickStatus('Done — your video is ready.','ok');
+      $('autoResult').innerHTML=$('result').innerHTML||'<span class="success">Video ready.</span>';
+    }
+  }catch(err){
+    setQuickStatus('Something stopped the automatic flow: '+(err?.message||err),'warn');
+  }finally{
+    $('createVideoBtn').disabled=false;
+    quickMusicFile=null;quickLogoFile=null;
+  }
+}
+
+function JevStatusEnabled(){
+  return Boolean(window.NAHAVIDEO_JEV_ENABLED);
+}
+
+function showStockReview(){
+  toggleAdvanced();
+  setTimeout(()=>document.querySelector('#stockAssets')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+}
+
 const $=id=>document.getElementById(id);
 const fmt=s=>Number(s).toFixed(1)+'s';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -112,14 +261,19 @@ function renderClipList(){
       (!stock?((sem.top_labels||[]).slice(0,2).map(x=>'<span class="pill">'+esc(x.label)+' '+Math.round(x.confidence*100)+'%</span>').join('')):'')+'</div></div>'
   }).join('');
 }
-async function upload(){
-  const fs=[...$('files').files];if(!fs.length)return;
+async function uploadFiles(fs){
+  const files=[...fs];if(!files.length)return;
   $('status').textContent='Uploading, analysing frames/audio and checking local AI adapters…';
-  const fd=new FormData();fs.forEach(f=>fd.append('files',f));
+  const fd=new FormData();files.forEach(f=>fd.append('files',f));
   const r=await fetch('/api/upload',{method:'POST',body:fd});const data=await r.json();
-  if(!r.ok){$('status').textContent=data.detail||JSON.stringify(data);return}
+  if(!r.ok)throw new Error(data.detail||JSON.stringify(data));
   clips=data.filter(x=>x.kind!=='stock'); renderClipList();
   $('planBtn').disabled=false;$('status').textContent=clips.length+' clip(s) ready.';
+}
+
+async function upload(){
+  try{ await uploadFiles([...$('files').files]); }
+  catch(err){ $('status').textContent=err.message||String(err); }
 }
 async function uploadStock(){
   const file=$('stockFile').files[0]; if(!file)return;
@@ -196,12 +350,12 @@ function chooseConcept(i){
 }
 
 async function uploadMusic(){
-  const file=$('music').files[0];if(!file)return null;
+  const file=quickMusicFile||$('music').files[0];if(!file)return null;
   const fd=new FormData();fd.append('file',file);const r=await fetch('/api/upload-music',{method:'POST',body:fd});const data=await r.json();
   if(!r.ok){$('status').textContent=data.detail||'Music upload failed';return null}return data.id;
 }
 async function uploadLogo(){
-  const file=$('logo').files[0];if(!file)return null;
+  const file=quickLogoFile||$('logo').files[0];if(!file)return null;
   const fd=new FormData();fd.append('file',file);const r=await fetch('/api/upload-logo',{method:'POST',body:fd});const data=await r.json();
   if(!r.ok){$('status').textContent=data.detail||'Logo upload failed';return null}return data.id;
 }
@@ -229,14 +383,14 @@ async function makePlan(){
   $('renderBtn').disabled=false;$('packBtn').disabled=false;
 }
 
-async function scoutMissingStock(){
+async function scoutMissingStock(automatic=false){
   const gaps=plan?.footage_gaps?.gaps||[];
-  if(!gaps.length){ $('stockScoutStatus').textContent='No missing footage needs stock search.'; return; }
+  if(!gaps.length){ $('stockScoutStatus').textContent='No missing footage needs stock search.'; return {status:'not_needed',collected_assets:[],candidates:[],missions:[]}; }
   $('stockScoutStatus').textContent='NahaLabs is searching stock providers and collecting public candidates…';
   const r=await fetch('/api/stock-scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gaps,max_missions:6})});
   const data=await r.json();
-  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Stock scout failed';return}
-  if(data.status==='disabled'){$('stockScoutStatus').textContent=data.message||'Jev is disabled.';return}
+  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Stock scout failed';if(automatic)return {status:'error',collected_assets:[],candidates:[],missions:[],error:data.detail};return;}
+  if(data.status==='disabled'){$('stockScoutStatus').textContent=data.message||'Jev is disabled.';if(automatic)return data;return}
   const added=(data.collected_assets||[]).filter(x=>x.status==='collected' && x.id && /\.(mp4|webm|mov)$/i.test(x.filename||''));
   for(const x of added){
     if(!stockAssets.some(a=>a.id===x.id)){
@@ -253,6 +407,7 @@ async function scoutMissingStock(){
   const collected=(data.collected_assets||[]).length;
   const candidates=(data.candidates||[]).length;
   $('stockScoutStatus').textContent='Stock scout finished · '+data.missions?.length+' provider search(s) · '+candidates+' candidate(s) · '+collected+' collected asset(s). Review/approve the collected stock before rendering.';
+  return data;
 }
 
 function renderPlan(){
@@ -360,6 +515,9 @@ async function renderPack(){
   $('result').innerHTML='<span class="success">Delivery pack ready.</span> '+links+' · <a href="'+data.base_download+'">Base render</a><span class="metric"> '+esc(pack.engine||'native')+'</span>';
   if(pack.status==='fallback_only') $('result').innerHTML='<span class="success">Base render complete.</span> <a href="'+data.base_download+'">Download base</a><span class="metric"> FFmpeg Skill unavailable; native fallback retained.</span>';
 }
+</script>
+<script>
+(async()=>{try{const r=await fetch('/api/health');const d=await r.json();window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled)}catch(e){window.NAHAVIDEO_JEV_ENABLED=false}})();
 </script>
 </body>
 </html>
