@@ -19,6 +19,8 @@ LABELS = [
     ("chef", "a chef preparing food in a professional kitchen"),
     ("people", "people dining at a restaurant"),
     ("interior", "a premium restaurant interior"),
+    ("experience", "a lively dining experience with real customers"),, "a lively dining experience with real customers"),
+    ("exterior", "the exterior or storefront of a restaurant or business"),
     ("product", "a close-up product or menu item"),
     ("generic", "an ordinary unrelated scene"),
 ]
