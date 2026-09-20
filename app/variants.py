@@ -130,9 +130,14 @@ def render_variants(
         work = output_dir / f"{slug}_parts"
         work.mkdir(exist_ok=True)
         if segments:
+            focal_plan = [
+                focal_point(source, cursor + min(0.05, max(0.05, float(item.get("duration", 0) or 0)) / 2))
+                for item in segments
+            ]
+            cursor = 0.0
             for i, item in enumerate(segments):
                 duration = max(0.05, float(item.get("duration", 0) or 0))
-                focal = focal_point(source, cursor + min(0.05, duration / 2))
+                focal = focal_plan[i]
                 focal_records.append({"index": i, "start": round(cursor, 3), "duration": round(duration, 3), **focal})
                 part = work / f"part_{i:03d}.mp4"
                 shot_captions = _write_ass(work / f"captions_{i:03d}.ass", captions or [], zone, offset=cursor, duration=duration)
