@@ -311,6 +311,16 @@ def create_project(req: ProjectRequest):
     return {"status": "saved", "project": document}
 
 
+@app.get("/api/projects/{project_id}/download")
+def download_project(project_id: str):
+    try:
+        data = load_project(PROJECTS, project_id)
+    except FileNotFoundError:
+        raise HTTPException(404, "Project not found")
+    path = PROJECTS / (normalize_project_id(project_id) + ".json")
+    return FileResponse(path, media_type="application/json", filename=path.name)
+
+
 @app.get("/api/projects/{project_id}")
 def get_project(project_id: str):
     try:
