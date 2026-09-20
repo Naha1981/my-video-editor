@@ -115,3 +115,12 @@ The website intake is intentionally deterministic and local-first. It does not c
 - A proprietary motion renderer can be injected without changing the Director or FFmpeg media pipeline.
 - The existing FFmpeg brand-card renderer remains the deterministic fallback when no proprietary engine is supplied.
 - Added contract tests for engine context and missing-output handling.
+
+
+## v0.15 — Per-shot Multi-frame Semantic Intelligence
+- Added reusable temporal semantic analysis for individual shot/scene windows.
+- Detected visual scene boundaries now define semantic analysis windows when local vision is enabled.
+- Each window aggregates multiple frames, reducing dependence on a single lucky frame.
+- Creative intent scoring can use the strongest verified semantic evidence from a specific shot window.
+- The existing CPU-only path remains unchanged when OpenCLIP is disabled.
+- Vision output now distinguishes whole-source semantic evidence from per-shot temporal evidence.
