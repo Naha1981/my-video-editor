@@ -72,15 +72,27 @@ EXTRACT_PUBLIC_ASSETS = """
     .map((e) => e.currentSrc || e.src || '')
     .filter((u) => /^https?:/i.test(u))
     .slice(0, 80);
+  const videoUrls = [...document.querySelectorAll('video, video source, source[src]')]
+    .filter(visible)
+    .map((e) => e.currentSrc || e.src || '')
+    .filter((u) => /^https?:/i.test(u))
+    .slice(0, 80);
+  const mediaLinks = [...document.querySelectorAll('a[href]')]
+    .filter(visible)
+    .map((e) => ({text: clean(e.innerText).slice(0, 240), url: e.href}))
+    .filter((x) => /^https?:/i.test(x.url))
+    .filter((x) => /\.(mp4|webm|mov)(?:[?#]|$)/i.test(x.url))
+    .slice(0, 80);
   const links = [...document.querySelectorAll('a[href]')]
     .filter(visible)
-    .map((e) => ({
-      text: clean(e.innerText).slice(0, 240),
-      url: e.href
-    }))
+    .map((e) => ({text: clean(e.innerText).slice(0, 240), url: e.href}))
     .filter((x) => /^https?:/i.test(x.url))
     .slice(0, 120);
-  return {image_urls: [...new Set(imageUrls)], links};
+  return {
+    image_urls: [...new Set(imageUrls)],
+    video_urls: [...new Set([...videoUrls, ...mediaLinks.map(x => x.url)])],
+    links
+  };
 })()
 """
 
@@ -127,9 +139,9 @@ def _run_agent(req: MissionRequest, target: str) -> dict:
             final_state = agent.snapshot()
 
         try:
-            public_assets = agent.browser.evaluate(EXTRACT_PUBLIC_ASSETS) or {"image_urls": [], "links": []}
+            public_assets = agent.browser.evaluate(EXTRACT_PUBLIC_ASSETS) or {"image_urls": [], "video_urls": [], "links": []}
         except Exception as exc:
-            public_assets = {"image_urls": [], "links": []}
+            public_assets = {"image_urls": [], "video_urls": [], "links": []}
             errors.append(f"asset extraction: {type(exc).__name__}: {exc}")
 
         observations = [
@@ -150,6 +162,15 @@ def _run_agent(req: MissionRequest, target: str) -> dict:
         ]
 
     assets = [
+        {
+            "kind": "video",
+            "url": url,
+            "purpose": "public_visible_video",
+            "source_url": final_state.get("page", {}).get("url") or target,
+            "verification": "browser_observed_public_media",
+        }
+        for url in public_assets.get("video_urls", [])[:40]
+    ] + [
         {
             "kind": "image",
             "url": url,
