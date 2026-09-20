@@ -91,3 +91,10 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Added a deterministic pacing allocator that assigns screen time by creative beat and requested pace.
 - Energetic ads keep hook/CTA and supporting cuts tight; balanced ads allow experience/proof beats more room.
 - Pacing respects the requested total duration and existing per-clip limits.
+
+
+## v0.12 — Multi-frame Semantic Intelligence
+- OpenCLIP semantic evidence is aggregated across multiple sampled frames instead of relying on a simple frame average alone.
+- Aggregation exposes conservative labels, peak evidence, temporal consistency, top semantic labels and the strongest individual frame.
+- Director intent matching consumes the aggregated semantic labels, while explainable shot tags expose multi-frame evidence.
+- A single contradictory frame is less likely to overturn the dominant visual story.
