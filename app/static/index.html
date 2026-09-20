@@ -27,7 +27,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Local-first creative editing engine</div></div>
-  <div class="muted">v0.3</div>
+  <div class="muted">v0.5</div>
 </div>
 
 <div class="grid">
@@ -41,7 +41,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel">
   <h2>2. Creative brief</h2>
   <textarea id="prompt">Create a 30-second premium restaurant advertisement. Start with the strongest food shot, remove dead time, keep the pacing energetic, lower the music under dialogue, and finish with the NahaLabs logo.</textarea>
-  <div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
+  <div class="metric">Client website URL (optional)</div><input id="siteUrl" placeholder="https://client.co.za"><button class="secondary" onclick="loadBrief()">Understand website</button><div id="briefStatus" class="status"></div><div id="briefSummary" class="metric"></div><div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
   <div class="metric" style="margin-top:10px">Optional NahaLabs logo</div><input id="logo" type="file" accept="image/png,image/jpeg,image/webp">
   <button id="planBtn" onclick="makePlan()" disabled>Build AI edit plan</button>
   <div id="status" class="status"></div>
@@ -52,8 +52,10 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div id="ranked" class="muted">Upload footage to begin.</div>
 </section>
 
+<section class="panel wide"><h2>4. AI storyboard</h2><div id="storyboard" class="clips"></div></section>
+
 <section class="panel wide">
-  <h2>4. Editable timeline</h2>
+  <h2>5. Editable timeline</h2>
   <div id="timeline" class="timeline"></div>
   <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4 with FFmpeg</button>
   <div id="result" class="status"></div>
@@ -84,6 +86,17 @@ async function upload(){
       ((sem.top_labels||[]).slice(0,2).map(x=>'<span class="pill">'+esc(x.label)+' '+Math.round(x.confidence*100)+'%</span>').join(''))+'</div></div>'
   }).join('');
   $('planBtn').disabled=false;$('status').textContent=clips.length+' clip(s) ready.';
+}
+
+async function loadBrief(){
+  const url=$('siteUrl').value.trim(); if(!url)return;
+  $('briefStatus').textContent='Reading website metadata and visible text locally…';
+  const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value})});
+  const data=await r.json(); if(!r.ok){$('briefStatus').textContent=data.detail||'Website intake failed';return}
+  const b=data.creative_brief;
+  $('briefSummary').textContent=b.business_name+' · '+b.category+' · CTA: '+b.cta+' · '+b.tone;
+  $('prompt').value='Create a '+b.tone+' '+b.category+' advertisement. Offer: '+b.offer+'. Audience: '+b.audience+'. CTA: '+b.cta+'. Use '+b.visual_keywords.join(', ')+'. Remove dead time, keep the pacing engaging, and finish with the brand.';
+  $('briefStatus').textContent='Brand brief ready. Director prompt updated.';
 }
 
 async function uploadMusic(){
