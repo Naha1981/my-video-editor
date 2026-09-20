@@ -22,6 +22,9 @@ from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stoc
 from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack
+from .integrations.nahallm import NahaLLMClient
+from .integrations.jev import JevBrowserAgent
+from .services.asset_scout import scout_website_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -59,6 +62,12 @@ class BriefRequest(BaseModel):
     command: str = ""
 
 
+class AssetScoutRequest(BaseModel):
+    url: str
+    task: str = ""
+    requirements: list[str] = []
+
+
 MEDIA_SUFFIXES = {
     ".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv",
     ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
@@ -84,6 +93,14 @@ def health():
         "stock_ingestion": "provenance-aware-upload",
         "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
         "delivery_pack": "ready",
+        "nahallm": {
+            "enabled": NahaLLMClient().enabled,
+            "configured": NahaLLMClient().configured,
+        },
+        "jev": {
+            "enabled": JevBrowserAgent().enabled,
+            "configured": JevBrowserAgent().configured,
+        },
     }
 
 
@@ -96,9 +113,33 @@ def brief_from_url(req: BriefRequest):
         naha_context = compile_context(req.command, req.prompt, creative)
         creative["naha_context"] = naha_context
         creative["direction"] = creative_direction(creative, req.prompt, naha_context)
+        if NahaLLMClient().enabled or JevBrowserAgent().enabled:
+            creative["asset_scout"] = scout_website_assets(
+                req.url,
+                req.prompt,
+                metadata={"command": req.command, "automatic": True},
+            )
         return {"site": site, "creative_brief": creative, "naha_context": naha_context}
     except Exception as e:
         raise HTTPException(400, f"Website intake failed: {e}")
+
+
+@app.post("/api/asset-scout")
+def asset_scout(req: AssetScoutRequest):
+    if not NahaLLMClient().enabled and not JevBrowserAgent().enabled:
+        return {
+            "status": "disabled",
+            "message": "Enable NahaLLM and/or Jev to run the browser asset scout.",
+        }
+    try:
+        result = scout_website_assets(
+            req.url,
+            req.task,
+            metadata={"requirements": req.requirements, "manual": True},
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(400, f"Asset scout failed: {type(exc).__name__}: {exc}")
 
 
 @app.post("/api/upload")
