@@ -78,3 +78,29 @@ def test_sanitize_plan_removes_disabled_and_unknown_clips():
     clean = sanitize_plan(plan, {"ok"}, 6)
     assert len(clean["timeline"]) == 1
     assert clean["timeline"][0]["clip_id"] == "ok"
+
+
+def test_v04_storyboard_has_hook_and_brand_close():
+    from app.storyboard import build_storyboard
+    plan = {
+        "timeline": [
+            {"type": "clip", "enabled": True, "filename": "hero.mp4", "duration": 3, "reasons": ["visual quality"]},
+            {"type": "logo", "enabled": True, "duration": 2},
+        ]
+    }
+    board = build_storyboard(plan)
+    assert board[0]["type"] == "hook"
+    assert board[-1]["type"] == "brand_close"
+
+
+def test_v04_captions_are_mapped_to_output_time():
+    from app.storyboard import add_transcript_captions
+    plan = {
+        "timeline": [{
+            "type": "clip", "enabled": True, "source_start": 10, "duration": 5,
+            "transcript_segments_source": [{"start": 11, "end": 13, "text": "Fresh from our kitchen"}]
+        }]
+    }
+    out = add_transcript_captions(plan)
+    assert out["captions"][0]["text"] == "Fresh from our kitchen"
+    assert out["captions"][0]["start"] == 1.0
