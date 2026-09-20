@@ -1,0 +1,7 @@
+# Optional local AI adapters for NahaVideo v0.3
+# Install only when you want on-device Whisper/OpenCLIP intelligence.
+
+faster-whisper>=1.2,<2
+open_clip_torch>=2.32,<3
+torch>=2.4,<3
+Pillow>=10,<13
