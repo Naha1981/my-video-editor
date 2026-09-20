@@ -6,12 +6,16 @@ from typing import Any
 def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
     """Turn an edit plan into explicit creative beats for the renderer/UI."""
     beats = []
+    direction = plan.get("creative_direction", {}) or {}
+    selected = direction.get("selected", {}) or {}
+    sequence = selected.get("shot_sequence", [])
     active = [x for x in plan.get("timeline", []) if x.get("enabled", True)]
     for i, item in enumerate(active):
         if item.get("type") == "logo":
             beats.append({
                 "beat": i + 1,
                 "type": "brand_close",
+                "creative_intent": "cta",
                 "purpose": "brand recall",
                 "visual": "NahaLabs logo/end card",
                 "duration": item.get("duration", 2.0),
@@ -33,9 +37,11 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
             purpose = "build"
             transition = "hard_cut"
 
+        intent = sequence[min(i, len(sequence) - 1)] if sequence else purpose
         beats.append({
             "beat": i + 1,
             "type": purpose,
+            "creative_intent": intent,
             "purpose": purpose,
             "visual": item.get("filename", "source clip"),
             "source_start": item.get("source_start", 0),
