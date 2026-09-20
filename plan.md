@@ -63,3 +63,18 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Filename evidence can now match creative intents such as hero_food, experience, proof, result and cta.
 - Stock-shot requirements identify hook and CTA footage as required, with supporting footage separated for procurement/planning.
 - This is intentionally additive: visual quality, semantic relevance, speech and other existing signals remain part of ranking.
+
+
+## v0.9 — AI Story Sequence
+- Creative shot sequence is now the source of truth for timeline ordering.
+- Each selected clip carries a creative intent and semantic intent-fit score.
+- Unmatched creative beats are explicitly recorded instead of silently inventing footage.
+- Storyboard reads the actual timeline intent, preserving sequence decisions after edits.
+- UI exposes the Director's ordered story sequence before rendering.
+- API version is 0.9.0.
+
+## Next — v0.10 Stock/B-roll Gap Detection
+- Compare required creative beats against available footage.
+- Identify missing required shots such as CTA/exterior or proof footage.
+- Generate practical stock-footage search requirements from the missing intent.
+- Keep the gap report explainable and editable before rendering.
