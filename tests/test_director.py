@@ -120,3 +120,27 @@ def test_stock_requirements_follow_category():
     req=shot_requirements({"category":"restaurant"})
     assert req[0]["beat"] == "hook"
     assert any("customer" in x["need"].lower() for x in req)
+
+
+def test_creative_direction_has_concept_and_shot_sequence():
+    from app.creative import creative_direction
+    direction=creative_direction({"category":"restaurant","cta":"Book your table","audience":"local diners"}, "premium energetic restaurant advertisement")
+    assert direction["selected"]["name"] == "The Craving Cut"
+    assert direction["selected"]["shot_sequence"][0] == "hero_food"
+    assert direction["pacing"] == "energetic"
+
+
+def test_storyboard_uses_creative_intent():
+    from app.storyboard import build_storyboard
+    plan={
+        "creative_direction":{"selected":{"shot_sequence":["hero_food","craft","cta"]}},
+        "timeline":[
+            {"type":"clip","enabled":True,"filename":"hero.mp4","duration":2},
+            {"type":"clip","enabled":True,"filename":"chef.mp4","duration":2},
+            {"type":"logo","enabled":True,"duration":2},
+        ],
+    }
+    board=build_storyboard(plan)
+    assert board[0]["creative_intent"] == "hero_food"
+    assert board[1]["creative_intent"] == "craft"
+    assert board[-1]["creative_intent"] == "cta"
