@@ -46,8 +46,9 @@ Render documents that persistent disks are available on paid services and preser
 16. Render a platform pack.
 17. Render 9:16 + 1:1 + 16:9 variants.
 18. Open the downloaded outputs and verify audio, captions, framing and the branded close.
-19. Run Final QA and build the Delivery Manifest before a client delivery.
-20. Test Privacy and Terms links.
+19. If production operator auth is enabled, verify sign-in/logout before the first client delivery.
+20. Run Final QA and build the Delivery Manifest before a client delivery.
+21. Test Privacy and Terms links.
 
 ## Recommended first launch
 
