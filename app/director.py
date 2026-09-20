@@ -182,6 +182,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
             "score": item["score"],
             "reasons": item["reasons"],
             "speech_ranges_source": (clip.analysis or {}).get("transcript", {}).get("speech_ranges", []),
+            "transcript_segments_source": (clip.analysis or {}).get("transcript", {}).get("segments", []),
         }
         timeline.append(timeline_item)
         duck_ranges.extend(_mapped_duck_ranges(timeline_item, clip, output_offset))
