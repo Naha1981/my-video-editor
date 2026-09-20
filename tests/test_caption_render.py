@@ -1,0 +1,11 @@
+from app.variants import _write_ass
+
+def test_ass_caption_renders_only_local_shot_window(tmp_path):
+    path=tmp_path/"caption.ass"
+    out=_write_ass(path,[{"start":2,"end":3,"text":"Book today","emphasis":["Book"]},{"start":5,"end":6,"text":"Fresh food","emphasis":["Fresh"]}],{"alignment":2,"margin_v":220,"font_size":20},offset=2,duration=2)
+    assert out==path
+    text=path.read_text(encoding="utf-8")
+    assert "0:00:00.00,0:00:01.00" not in text
+    assert "Book today" in text
+    assert "Fresh food" not in text
+    assert r"\b1\fs22" in text
