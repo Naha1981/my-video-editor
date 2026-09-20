@@ -229,7 +229,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
     decisions = [
         {"step": 1, "action": "select", "rule": "Rank shots by creative relevance plus visual quality"},
         {"step": 2, "action": "trim", "rule": "Prefer speech/activity windows and remove dead time"},
-        {"step": 3, "action": "pace", "rule": f"Use {settings['pace']} source windows"},
+        {"step": 3, "action": "pace", "rule": f"Use beat-aware {settings['pace']} pacing"},
     ]
     if settings["music_ducking"]:
         decisions.append({
@@ -240,7 +240,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.11",
+        "version": "0.12",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
