@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-from pathlib import Path
 from app.variants import render_variants
+
 
 def test_render_variants_rejects_missing_source(tmp_path):
     out = render_variants(tmp_path / "missing.mp4", tmp_path / "out", ["9:16"])
     assert out["status"] == "failed"
 
-def test_render_variants_ignores_unknown_formats(tmp_path):
+
+def test_render_variants_ignores_unknown_formats(tmp_path, monkeypatch):
     source = tmp_path / "source.mp4"
     source.write_bytes(b"x")
+    monkeypatch.setattr("app.variants.focal_point", lambda path, sample_time=0.0: {"x": 0.5, "y": 0.5, "confidence": 0.1})
+    monkeypatch.setattr("app.variants.subprocess.run", lambda *args, **kwargs: type("P", (), {"returncode": 1, "stderr": "expected fixture"})())
     out = render_variants(source, tmp_path / "out", ["9:16", "bogus"])
     assert len(out["results"]) == 1
     assert out["results"][0]["aspect"] == "9:16"
@@ -22,20 +25,21 @@ def test_crop_filter_contains_focal_bias():
     assert "0.3800" in out
 
 
-def test_focal_point_has_safe_center_fallback(tmp_path):
+def test_focal_point_has_safe_center_fallback(tmp_path, monkeypatch):
     from app.focal import focal_point
+    monkeypatch.setattr("app.focal.subprocess.run", lambda *args, **kwargs: type("P", (), {"returncode": 1, "stdout": b""})())
     out = focal_point(tmp_path / "missing.mp4")
     assert out["x"] == 0.5
     assert out["y"] == 0.5
 
 
-def test_render_variants_accepts_timeline_for_per_shot_reframing(tmp_path):
+def test_render_variants_accepts_timeline_for_per_shot_reframing(tmp_path, monkeypatch):
     import app.variants as variants
     source = tmp_path / "source.mp4"
     source.write_bytes(b"x")
     calls = []
-    variants.focal_point = lambda path, sample_time=0.0: calls.append(sample_time) or {"x": 0.5, "y": 0.5, "confidence": 0.1}
-    variants.subprocess.run = lambda *args, **kwargs: type("P", (), {"returncode": 1, "stderr": "expected fixture"})()
+    monkeypatch.setattr(variants, "focal_point", lambda path, sample_time=0.0: calls.append(sample_time) or {"x": 0.5, "y": 0.5, "confidence": 0.1})
+    monkeypatch.setattr(variants.subprocess, "run", lambda *args, **kwargs: type("P", (), {"returncode": 1, "stderr": "expected fixture"})())
     out = variants.render_variants(
         source, tmp_path / "out", ["9:16"],
         timeline=[{"type": "clip", "duration": 2}, {"type": "clip", "duration": 3}],
