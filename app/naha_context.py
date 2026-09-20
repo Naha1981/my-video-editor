@@ -122,19 +122,19 @@ def parse_commands(command: str = "", prompt: str = "") -> dict[str, Any]:
 
     product = None
     for key in PRODUCTS:
-        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f'/{key.replace("_", "-")}' in raw.lower():
             product = key
             break
 
     objective = None
     for key in OBJECTIVES:
-        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f'/{key.replace("_", "-")}' in raw.lower():
             objective = key
             break
 
     format_name = None
     for key in FORMATS:
-        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f'/{key.replace("_", "-")}' in raw.lower():
             format_name = key
             break
 
