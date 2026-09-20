@@ -139,8 +139,18 @@ async function uploadStock(){
   $('planBtn').disabled=false;
   $('stockStatus').textContent=(data.approved?'Approved':'Pending')+' stock attached. Rebuild the AI edit plan to use it.';
 }
+async function approveCollectedAsset(id){
+  const r=await fetch('/api/assets/'+encodeURIComponent(id)+'/approve',{method:'POST'});
+  const data=await r.json();
+  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Approval failed';return}
+  const item=stockAssets.find(x=>x.id===id);
+  if(item){item.approved=true;item.provenance_status=data.provenance_status||'approved_by_operator';}
+  renderStockAssets();
+  $('stockScoutStatus').textContent='Asset approved for the edit. Rebuild the AI edit plan to include it.';
+}
+
 function renderStockAssets(){
-  $('stockAssets').innerHTML=stockAssets.map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge '+(x.approved?'ai':'')+'">'+esc(x.provenance_status||'pending')+'</span></div><div class="muted">'+esc(x.intent)+' · '+esc(x.provider||'provider not stated')+' · '+esc(x.license_name||'license not stated')+'</div></div>').join('');
+  $('stockAssets').innerHTML=stockAssets.map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge '+(x.approved?'ai':'')+'">'+esc(x.provenance_status||'pending')+'</span></div><div class="muted">'+esc(x.intent)+' · '+esc(x.provider||'provider not stated')+' · '+esc(x.license_name||'license not stated')+'</div><div class="metric"><a href="/api/assets/'+encodeURIComponent(x.id)+'" target="_blank" rel="noreferrer">Preview asset</a>'+(x.approved?'':' · <button class="secondary" onclick="approveCollectedAsset(''+esc(x.id)+'')">Approve for edit</button>')+'</div></div>').join('');
 }
 
 async function scoutAssets(){
