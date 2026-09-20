@@ -288,3 +288,9 @@ NahaVideo Web Service
 - Caption chunks now identify a small set of meaningful commercial/emphasis words.
 - Emphasis is metadata-first; no bouncing-word or noisy kinetic typography is introduced.
 - Normal captions remain visually unchanged.
+
+
+## v0.34 — Visual Caption Hierarchy
+- Added normal/emphasis/hero caption styles based on message importance.
+- Short commercial statements with emphasis receive stronger but restrained typography.
+- Longer captions receive a smaller emphasis treatment; ordinary dialogue remains unchanged.
