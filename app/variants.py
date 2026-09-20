@@ -60,7 +60,7 @@ def _write_ass(path: Path, captions: list[dict[str, Any]], zone: dict[str, Any],
         rendered=[]
         for word in words:
             clean=word.strip(".,!?;:")
-            rendered.append(r"{\\b1\\fs%d}%s{\\b0\\fs%d}" % (zone["font_size"]+2, word, zone["font_size"]) if clean.lower() in emphasis else word)
+            rendered.append(r"{\b1\fs%d}%s{\b0\fs%d}" % (zone["font_size"]+2, word, zone["font_size"]) if clean.lower() in emphasis else word)
         local.append((_ass_ts(start),_ass_ts(end)," ".join(rendered)))
     if not local: return None
     path.write_text(
