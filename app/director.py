@@ -3,6 +3,7 @@ from typing import Any
 
 from .shot_intelligence import intent_fit
 from .sequence import build_story_sequence
+from .pacing import apply_pacing
 
 @dataclass
 class Clip:
@@ -193,6 +194,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         max_duration=remaining,
         max_per_clip=max_per,
     )
+    timeline = apply_pacing(timeline, float(settings["duration"]), settings["pace"])
     duck_ranges: list[list[float]] = []
     output_offset = 0.0
 
@@ -238,7 +240,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.10",
+        "version": "0.11",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
