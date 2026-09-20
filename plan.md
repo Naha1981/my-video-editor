@@ -153,3 +153,14 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Rendered outputs can now be probed with probe.py and checked against a delivery platform with check.py.
 - If the skill is unavailable, NahaVideo keeps using its native FFmpeg renderer and reports that fallback explicitly.
 - The Director remains the creative brain; ffmpeg-skill is an optional deterministic execution/verification layer.
+
+
+## v0.19 — NahaLabs Creative Command Context
+- Added a reusable machine-readable NahaLabs context for product, commercial lane, campaign objective, format and authenticity profile.
+- Supports commands such as `/cargoiq /lead-gen /facebook-ad /nahalabs-authentic`.
+- Commercial lanes are explicit: Intelligent Solutions and Enterprise Intelligence.
+- The Creative Director now receives this context before it builds the creative concept.
+- Objective rules can alter the creative rule for lead generation, revenue recovery, proof, bookings, sales and awareness.
+- The NahaLabs Authenticity profile carries South African realism, natural people, local environments and believable imperfections as production constraints.
+- The context also exposes two reusable loops: Find → Understand → Act → Learn for system narratives, and Content → Distribution → Leads → Sales → Revenue → Analytics for growth workflows.
+- The context is surfaced in the Director UI and can later be reused by website, advertising and broader Creative Growth OS tooling.
