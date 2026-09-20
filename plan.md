@@ -1,9 +1,9 @@
-# NahaVideo AI Director — v0.5 Build Plan
+# NahaVideo AI Director — v0.6 Build Plan
 
 ## Goal
 Turn the local-first editor into an explainable AI Director that can combine deterministic media signals with optional local model intelligence.
 
-## v0.5 shipped
+## v0.6 shipped
 - Optional local faster-whisper transcription adapter with word timestamps.
 - Optional local OpenCLIP semantic vision adapter.
 - Director scoring now combines visual quality, food/hero semantic relevance, filename priors and speech signals.
@@ -36,7 +36,7 @@ Optional model:
 - Dialogue ducking is transcript-range based when Whisper is available, with sidechain fallback otherwise.
 
 
-## v0.5 shipped
+## v0.6 shipped
 - Local website URL intake extracts title, description and visible text using the Python standard library.
 - Deterministic creative-brief compiler produces business category, offer, audience, tone, CTA and visual requirements.
 - Stock-shot requirement generator turns the brief into a practical footage shopping list.
@@ -48,3 +48,11 @@ Optional model:
 Client website URL → Brand intake → Creative brief → Shot requirements → Footage → AI Director → Storyboard → Captions → NahaLabs motion graphics → MP4
 
 The website intake is intentionally deterministic and local-first. It does not claim to understand a site with an external LLM; the extracted brief remains editable and can later be connected to a local model.
+
+
+## v0.6 — Creative Director
+- Added a deterministic creative-direction engine that turns brand/brief context into an ad concept, hook, promise, proof path, CTA and shot sequence.
+- Restaurant direction includes sensory hero, experience and signature concepts; general business direction includes outcome, problem→solution and proof concepts.
+- The selected concept is attached to every edit plan and surfaced in the UI.
+- Storyboard beats now carry explicit creative shot intent such as `hero_food`, `craft`, `proof`, `experience`, `result` and `cta`.
+- Website intake now feeds the Creative Director before the editing plan is produced.
