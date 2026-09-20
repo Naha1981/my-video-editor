@@ -107,3 +107,11 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Pacing decisions are explainable: `beat_aligned`, `speech_safe`, `speech_preserved` and `unchanged`.
 - The API exposes music BPM/beat timestamps and pacing decisions.
 - The existing deterministic CPU/local-first path remains the fallback when beat analysis is unavailable.
+
+
+## v0.14 — NahaLabs Motion Graphics Engine
+- Brand end cards now render through a formal NahaLabs motion-engine adapter seam.
+- The motion engine receives a stable brand context including NahaLabs identity, NahaVideo product identity, 1080x1920/30fps output requirements, duration and logo path.
+- A proprietary motion renderer can be injected without changing the Director or FFmpeg media pipeline.
+- The existing FFmpeg brand-card renderer remains the deterministic fallback when no proprietary engine is supplied.
+- Added contract tests for engine context and missing-output handling.
