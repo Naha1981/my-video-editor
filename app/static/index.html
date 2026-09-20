@@ -57,11 +57,11 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div>
   <div class="metric" id="operatingLoop"></div></section>
 
-<section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><div id="gaps" class="clips"></div></section>
+<section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><button class="secondary" onclick="scoutMissingStock()">Find missing stock/B-roll automatically</button><div id="stockScoutStatus" class="status"></div><div id="gaps" class="clips"></div></section>
 
 <section class="panel wide">
   <h2>6. Attach stock footage</h2>
-  <div class="metric">Download the selected stock clip yourself, then attach it here with its source/provenance. Approved stock can fill the matching creative intent automatically.</div>
+  <div class="metric">NahaLabs can now search stock providers and collect public video candidates automatically. Assets remain pending until provenance/license is approved; approved stock can fill the matching creative intent.</div>
   <div class="grid" style="margin-top:10px">
     <input id="stockFile" type="file" accept="video/*">
     <select id="stockIntent"><option value="cta">CTA</option><option value="hero_food">Hero food</option><option value="craft">Craft</option><option value="experience">Experience</option><option value="proof">Proof</option><option value="problem">Problem</option><option value="result">Result</option></select>
@@ -156,6 +156,7 @@ async function scoutAssets(){
   const obs=data.observations?.length||0, assets=data.assets?.length||0;
   $('assetScoutStatus').textContent='Asset Scout: '+esc(data.status||'completed')+' · '+obs+' observation(s) · '+assets+' asset/link candidate(s).';
   $('assetScoutResults').innerHTML=(data.assets||[]).slice(0,30).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.kind||'asset')+'</b></div><div class="muted">'+esc(x.url||'')+'</div></div>').join('');
+  if(data.collected_assets?.length) $('assetScoutStatus').textContent += ' · '+data.collected_assets.filter(x=>x.status==='collected').length+' collected';
   if(data.errors?.length) $('assetScoutStatus').textContent += ' · '+esc(data.errors[0]);
 }
 
@@ -216,6 +217,32 @@ async function makePlan(){
   const chosen=plan.creative_direction?.selected;
   if(chosen) $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
   $('renderBtn').disabled=false;$('packBtn').disabled=false;
+}
+
+async function scoutMissingStock(){
+  const gaps=plan?.footage_gaps?.gaps||[];
+  if(!gaps.length){ $('stockScoutStatus').textContent='No missing footage needs stock search.'; return; }
+  $('stockScoutStatus').textContent='NahaLabs is searching stock providers and collecting public candidates…';
+  const r=await fetch('/api/stock-scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gaps,max_missions:6})});
+  const data=await r.json();
+  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Stock scout failed';return}
+  if(data.status==='disabled'){$('stockScoutStatus').textContent=data.message||'Jev is disabled.';return}
+  const added=(data.collected_assets||[]).filter(x=>x.status==='collected' && x.id && /\.(mp4|webm|mov)$/i.test(x.filename||''));
+  for(const x of added){
+    if(!stockAssets.some(a=>a.id===x.id)){
+      stockAssets.push({
+        id:x.id,filename:x.filename,kind:'stock',approved:false,
+        intent:x.intent||'cta',beat:x.beat||x.intent||'cta',
+        provider:x.provider||'browser-scout',
+        source_url:x.url||'',license_name:'',attribution:'',
+        provenance_status:'pending'
+      });
+    }
+  }
+  renderStockAssets();
+  const collected=(data.collected_assets||[]).length;
+  const candidates=(data.candidates||[]).length;
+  $('stockScoutStatus').textContent='Stock scout finished · '+data.missions?.length+' provider search(s) · '+candidates+' candidate(s) · '+collected+' collected asset(s). Review/approve the collected stock before rendering.';
 }
 
 function renderPlan(){
