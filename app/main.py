@@ -13,12 +13,13 @@ from .storyboard import build_storyboard, add_transcript_captions
 from .brief import fetch_brand, compile_creative_brief
 from .stock import shot_requirements
 from .creative import creative_direction
+from .gaps import detect_footage_gaps
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.9.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.10.0")
 
 
 class PlanRequest(BaseModel):
@@ -28,6 +29,7 @@ class PlanRequest(BaseModel):
     music_id: str | None = None
     logo_id: str | None = None
     creative_direction: dict | None = None
+    creative_brief: dict | None = None
 
 
 class RenderRequest(BaseModel):
@@ -50,7 +52,7 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.9.0"}
+    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.10.0"}
 
 
 @app.post("/api/brief-from-url")
@@ -139,6 +141,12 @@ def plan(req: PlanRequest):
     result["audio"]["background_music"] = bool(req.music_id and _find_media(req.music_id))
     result["audio"]["music_id"] = req.music_id
     result["branding"]["logo_id"] = req.logo_id if req.logo_id and _find_media(req.logo_id) else None
+    brief = req.creative_brief or {"category": result["settings"].get("priority") == "food" and "restaurant" or "business"}
+    brief["shot_requirements"] = brief.get("shot_requirements") or shot_requirements(brief)
+    result["footage_gaps"] = detect_footage_gaps(
+        brief, direction, result["timeline"],
+        [{"filename": c.filename, "analysis": c.analysis or {}} for c in clips],
+    )
     return result
 
 
