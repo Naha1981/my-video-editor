@@ -215,3 +215,11 @@ NahaVideo Web Service
 - The application now orchestrates website understanding, creative direction, footage-gap analysis, optional automatic stock scouting, and delivery rendering behind the simplified UI.
 - The advanced Director, stock provenance and editable timeline controls remain available without being required for normal operation.
 - Automatic stock remains pending until an operator confirms provenance/license; the base draft can render without blocking on that approval.
+
+
+## v0.24 — Approved Stock Finalization
+- Fixed the advanced plan flow so approved stock asset IDs are actually passed back into the Director.
+- Added a one-click **Rebuild & Finalize with Approved Stock** workflow after operator approval.
+- The Director re-runs sequence selection, footage-gap detection, pacing and captions with approved stock as first-class footage.
+- Final delivery rendering uses only approved stock assets; pending stock remains excluded.
+- Preserves the provenance-first rule: approval is explicit and traceable before automatic story selection.
