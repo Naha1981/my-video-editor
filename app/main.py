@@ -26,6 +26,7 @@ from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
 from .services.asset_fetcher import collect_public_assets
+from .services.stock_scout import scout_missing_stock
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -67,6 +68,11 @@ class AssetScoutRequest(BaseModel):
     url: str
     task: str = ""
     requirements: list[str] = []
+
+
+class StockScoutRequest(BaseModel):
+    gaps: list[dict] = []
+    max_missions: int = 6
 
 
 MEDIA_SUFFIXES = {
@@ -151,6 +157,19 @@ def asset_scout(req: AssetScoutRequest):
         return result
     except Exception as exc:
         raise HTTPException(400, f"Asset scout failed: {type(exc).__name__}: {exc}")
+
+
+@app.post("/api/stock-scout")
+def stock_scout(req: StockScoutRequest):
+    if not JevBrowserAgent().enabled:
+        return {
+            "status": "disabled",
+            "message": "Enable Jev to automatically search stock providers for missing footage.",
+        }
+    try:
+        return scout_missing_stock(req.gaps, max_missions=req.max_missions)
+    except Exception as exc:
+        raise HTTPException(400, f"Stock scout failed: {type(exc).__name__}: {exc}")
 
 
 @app.post("/api/upload")
