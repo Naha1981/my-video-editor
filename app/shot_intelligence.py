@@ -33,6 +33,17 @@ def classify_shot(analysis: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def intent_fit(analysis: dict[str, Any] | None, intent: str) -> float:
-    labels = (analysis or {}).get("semantic", {}).get("labels", {}) or {}
+    analysis = analysis or {}
+    labels = analysis.get("semantic", {}).get("labels", {}) or {}
     wanted = INTENT_LABELS.get(intent, [intent])
-    return round(max((float(labels.get(label, 0) or 0) for label in wanted), default=0.0), 3)
+    overall = max((float(labels.get(label, 0) or 0) for label in wanted), default=0.0)
+    windows = analysis.get("semantic_windows", []) or []
+    window_fit = max(
+        (
+            max((float((window.get("labels", {}) or {}).get(label, 0) or 0) for label in wanted), default=0.0)
+            for window in windows
+            if isinstance(window, dict)
+        ),
+        default=0.0,
+    )
+    return round(max(overall, window_fit), 3)
