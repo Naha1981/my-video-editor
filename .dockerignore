@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+media/*
+tests
+requirements-models.txt
+TESTING.md
