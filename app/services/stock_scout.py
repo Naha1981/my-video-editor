@@ -68,6 +68,7 @@ def scout_missing_stock(gaps: list[dict[str, Any]], max_missions: int = 6) -> di
         )
         try:
             result = worker.run_mission(mission).as_dict()
+            new_candidates = []
             for asset in result.get("assets") or []:
                 enriched = {
                     **asset,
@@ -77,6 +78,7 @@ def scout_missing_stock(gaps: list[dict[str, Any]], max_missions: int = 6) -> di
                     "priority": job["priority"],
                 }
                 all_candidates.append(enriched)
+                new_candidates.append(enriched)
             results.append({
                 "provider": job["provider"],
                 "query": job["query"],
@@ -86,7 +88,7 @@ def scout_missing_stock(gaps: list[dict[str, Any]], max_missions: int = 6) -> di
             })
             provider_page = job["url"]
             media_candidates = [
-                x for x in all_candidates[-120:]
+                x for x in new_candidates
                 if x.get("kind") in {"video", "direct_media"}
             ]
             if media_candidates:
