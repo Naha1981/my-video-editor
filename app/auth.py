@@ -10,11 +10,11 @@ from typing import Any
 
 
 def enabled() -> bool:
-    return bool(os.getenv("NAHAVIDEO_AUTH_PASSWORD", "").strip() and secret())
+    return bool(os.getenv("NAHAVIDEO_AUTH_PASSWORD", "").strip() and os.getenv("NAHAVIDEO_AUTH_SECRET", "").strip())
 
 
 def secret() -> bytes:
-    return os.getenv("NAHAVIDEO_AUTH_SECRET", "nahavideo-change-this-secret").encode("utf-8")
+    return os.getenv("NAHAVIDEO_AUTH_SECRET", "").encode("utf-8")
 
 
 def _sign(payload: str) -> str:
