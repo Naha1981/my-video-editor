@@ -204,6 +204,75 @@ def _find_media(mid: str):
     return matches[0] if matches else None
 
 
+class ProjectRequest(BaseModel):
+    id: str = ""
+    name: str = ""
+    prompt: str = ""
+    plan: dict
+    clip_ids: list[str] = []
+    stock_asset_ids: list[str] = []
+    music_id: str | None = None
+    logo_id: str | None = None
+    platforms: list[str] = []
+
+
+@app.get("/api/ready")
+def ready():
+    checks = {
+        "media_dir": MEDIA.exists() and os.access(MEDIA, os.W_OK),
+        "project_dir": PROJECTS.exists() and os.access(PROJECTS, os.W_OK),
+        "ffmpeg": bool(_shutil.which("ffmpeg")),
+    }
+    ready_state = all(checks.values())
+    return JSONResponse(
+        {"ready": ready_state, "checks": checks, "version": app.version},
+        status_code=200 if ready_state else 503,
+    )
+
+
+@app.get("/api/runtime")
+def runtime_status():
+    total, used, free = _shutil.disk_usage(DATA_ROOT)
+    return {
+        "version": app.version,
+        "data_root": str(DATA_ROOT),
+        "disk": {"total_bytes": total, "used_bytes": used, "free_bytes": free},
+        "limits": {
+            "video_mb": MAX_VIDEO_UPLOAD_BYTES // (1024 * 1024),
+            "stock_mb": MAX_STOCK_UPLOAD_BYTES // (1024 * 1024),
+            "audio_mb": MAX_AUDIO_UPLOAD_BYTES // (1024 * 1024),
+            "logo_mb": MAX_LOGO_UPLOAD_BYTES // (1024 * 1024),
+        },
+        "rate_limit_per_minute": RATE_LIMIT_PER_MINUTE,
+    }
+
+
+@app.get("/api/projects")
+def get_projects():
+    return {"projects": list_projects(PROJECTS)}
+
+
+@app.post("/api/projects")
+def create_project(req: ProjectRequest):
+    payload = req.model_dump()
+    payload["id"] = normalize_project_id(
+        payload.get("id") or payload.get("name") or "project-" + uuid4().hex[:8]
+    )
+    payload["name"] = payload.get("name") or payload["id"]
+    document = save_project(PROJECTS, payload)
+    return {"status": "saved", "project": document}
+
+
+@app.get("/api/projects/{project_id}")
+def get_project(project_id: str):
+    try:
+        return load_project(PROJECTS, project_id)
+    except FileNotFoundError:
+        raise HTTPException(404, "Project not found")
+    except json.JSONDecodeError:
+        raise HTTPException(500, "Saved project is invalid")
+
+
 @app.get("/api/health")
 def health():
     return {
@@ -232,7 +301,7 @@ def health():
 @app.post("/api/brief-from-url")
 def brief_from_url(req: BriefRequest):
     try:
-        site = fetch_brand(req.url)
+        site = fetch_brand(validate_public_url(req.url, label="website URL"))
         creative = compile_creative_brief(site, req.prompt)
         creative["shot_requirements"] = shot_requirements(creative)
         naha_context = compile_context(req.command, req.prompt, creative)
@@ -247,7 +316,7 @@ def brief_from_url(req: BriefRequest):
             if creative["asset_scout"].get("assets"):
                 creative["asset_scout"]["collected_assets"] = collect_public_assets(
                     creative["asset_scout"]["assets"],
-                    source_url=req.url,
+                    source_url=safe_source_url,
                 )
         return {"site": site, "creative_brief": creative, "naha_context": naha_context}
     except Exception as e:
@@ -262,8 +331,9 @@ def asset_scout(req: AssetScoutRequest):
             "message": "Enable NahaLLM and/or Jev to run the browser asset scout.",
         }
     try:
+        safe_url = validate_public_url(req.url, label="website URL")
         result = scout_website_assets(
-            req.url,
+            safe_url,
             req.task,
             metadata={"requirements": req.requirements, "manual": True},
         )
@@ -284,8 +354,9 @@ def cobalt_ingest(req: CobaltImportRequest):
     if not cobalt_configured():
         raise HTTPException(400, "Cobalt is not configured")
     try:
-        response = request_media(req.url, video_quality=req.video_quality)
-        candidates = normalize_candidates(req.url, response)
+        safe_source_url = validate_public_url(req.url, label="media URL")
+        response = request_media(safe_source_url, video_quality=req.video_quality)
+        candidates = normalize_candidates(safe_source_url, response)
         imported = []
         for candidate in candidates[:6]:
             media_url = str(candidate.get("url") or "")
