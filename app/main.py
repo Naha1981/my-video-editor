@@ -311,7 +311,7 @@ def render_pack(req: RenderRequest):
     platforms = normalize_platforms(req.platforms or [req.platform])
     pack_dir = MEDIA / f"delivery_{rid}"
     pack = render_delivery_pack(base_output, pack_dir, platforms)
-    base_qc = verify_output(base_output, req.platform)
+    base_qc = verify_output(base_output, platforms[0])
     return {
         "id": rid,
         "base_download": f"/api/render-pack/{rid}/base",
