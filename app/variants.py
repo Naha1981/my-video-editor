@@ -21,10 +21,8 @@ def render_variants(source: Path, output_dir: Path, formats: list[str] | None = 
         width, height = FORMATS[aspect]
         slug = aspect.replace(":", "x")
         output = output_dir / f"{source.stem}_{slug}.mp4"
-        vf = (
-            f"scale={width}:{height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height},setsar=1"
-        )
+        focal = focal_point(source)
+        vf = crop_filter(width, height, focal)
         cmd = [
             "ffmpeg", "-y", "-v", "error", "-i", str(source),
             "-vf", vf, "-r", "30",
