@@ -185,6 +185,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         scored.append({"clip": clip, "score": score, "reasons": reasons})
     scored.sort(key=lambda x: x["score"], reverse=True)
 
+    max_per = min(4.0, max(0.6, float(settings["duration"])))
     remaining = float(settings["duration"])
     timeline, sequence_decisions = build_story_sequence(
         scored,
