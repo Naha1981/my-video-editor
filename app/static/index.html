@@ -109,6 +109,7 @@ async function makePlan(){
 }
 
 function renderPlan(){
+  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">'+esc(b.purpose)+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
     const sem=x.analysis?.semantic?.top_labels||[],tr=x.analysis?.transcript||{};
     return '<div class="rank"><div class="score">'+x.score+'</div><div><b>'+(i+1)+'. '+esc(x.filename)+'</b>'+
@@ -117,6 +118,7 @@ function renderPlan(){
       (tr.available?'<span class="pill">speech '+tr.segments.length+' segment(s)</span>':'')+'</div></div></div>'
   }).join('');
   renderTimeline();
+  if(plan.captions?.length) $('status').textContent += ' · '+plan.captions.length+' caption cue(s) detected';
 }
 
 function renderTimeline(){
