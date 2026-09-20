@@ -9,3 +9,11 @@ def test_ass_caption_renders_only_local_shot_window(tmp_path):
     assert "Book today" in text
     assert "Fresh food" not in text
     assert r"\b1\fs22" in text
+
+
+def test_ass_caption_uses_rhythm_aware_fade(tmp_path):
+    path=tmp_path/"rhythm.ass"
+    out=_write_ass(path,[{"start":1,"end":2,"text":"Book today","style":"hero","rhythm":"accent"}],{"alignment":2,"margin_v":220,"font_size":20})
+    assert out==path
+    text=path.read_text(encoding="utf-8")
+    assert r"\fad(180,180)" in text
