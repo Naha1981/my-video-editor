@@ -206,3 +206,5 @@ NahaVideo Web Service
 - Added a one-click NahaLabs stock scout so missing footage can be searched and candidate media collected without manual stock-site browsing.
 - Approved collected stock now flows through the existing Director and delivery-pack paths.
 - Existing renderer, Director, provenance model and feature-flag fallback remain intact.
+
+- Auto-collected stock can be previewed and approved in place; no download/re-upload step is required.
