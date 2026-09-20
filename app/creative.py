@@ -8,9 +8,17 @@ def _norm(value: str) -> str:
     return re.sub(r"\s+", " ", value or "").strip()
 
 
-def creative_direction(brief: dict[str, Any] | None = None, prompt: str = "") -> dict[str, Any]:
+def creative_direction(
+    brief: dict[str, Any] | None = None,
+    prompt: str = "",
+    naha_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     brief = brief or {}
+    naha_context = naha_context or {}
     corpus = _norm(" ".join([
+      str(naha_context.get("product", "")),
+      str(naha_context.get("objective", "")),
+      str(naha_context.get("lane", "")),
         str(brief.get("category", "")),
         str(brief.get("offer", "")),
         str(brief.get("tone", "")),
@@ -87,6 +95,24 @@ def creative_direction(brief: dict[str, Any] | None = None, prompt: str = "") ->
         ]
         selected = concepts[1] if "problem" in corpus or "pain" in corpus else concepts[0]
 
+    objective_rule = {
+        "lead_gen": "Make the next action obvious and qualify the right opportunity.",
+        "revenue_recovery": "Make the missed value visible, then show the recovery action.",
+        "proof": "Prefer evidence, process and credible outcomes over hype.",
+        "bookings": "Create desire, reduce friction and make booking the obvious next step.",
+        "sales": "Move from recognised problem to useful outcome and clear next action.",
+        "awareness": "Make the brand or problem memorable without over-explaining.",
+    }.get(naha_context.get("objective"), "")
+    authenticity = naha_context.get("authenticity_profile")
+    rules = [
+        "Show the strongest visual first.",
+        "Every beat must earn its place.",
+        "Finish with a single clear CTA.",
+    ]
+    if objective_rule:
+        rules.append(objective_rule)
+    if authenticity:
+        rules.append("Use the NahaLabs Authenticity profile: credible South African context, natural people and believable imperfections.")
     return {
         "selected": selected,
         "options": concepts,
@@ -94,5 +120,11 @@ def creative_direction(brief: dict[str, Any] | None = None, prompt: str = "") ->
         "audience": audience,
         "tone": brief.get("tone", "modern, clear, human"),
         "pacing": "energetic" if fast else ("cinematic" if premium else "balanced"),
-        "creative_rule": "Show the strongest visual first; every beat must earn its place; finish with a single clear CTA.",
+        "creative_rule": " ".join(rules),
+        "operating_loop": naha_context.get("operating_loop", ["find", "understand", "act", "learn"]),
+        "objective": naha_context.get("objective"),
+        "product": naha_context.get("product"),
+        "lane": naha_context.get("lane"),
+        "format": naha_context.get("format"),
+        "authenticity_profile": authenticity,
     }
