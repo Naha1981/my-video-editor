@@ -24,6 +24,7 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
             continue
 
         reasons = " ".join(item.get("reasons", [])).lower()
+        intent = item.get("creative_intent") or (sequence[min(i, len(sequence) - 1)] if sequence else None)
         if i == 0:
             purpose = "hook"
             transition = "hard_cut"
@@ -37,7 +38,6 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
             purpose = "build"
             transition = "hard_cut"
 
-        intent = sequence[min(i, len(sequence) - 1)] if sequence else purpose
         beats.append({
             "beat": i + 1,
             "type": purpose,
@@ -48,6 +48,8 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
             "duration": item.get("duration", 0),
             "transition": transition,
             "caption": None,
+            "intent_fit": item.get("intent_fit", 0),
+            "selection_score": item.get("score", 0),
         })
     return beats
 
