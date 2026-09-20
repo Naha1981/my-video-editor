@@ -32,3 +32,22 @@ def segment_caption(segment: dict[str, Any], max_words: int = 6, max_chars: int 
 
 def build_caption_track(segments: list[dict[str,Any]] | None) -> list[dict[str,Any]]:
     return [cap for seg in (segments or []) for cap in segment_caption(seg)]
+
+
+EMPHASIS_WORDS = {
+    "new", "now", "free", "save", "limited", "today", "book", "order",
+    "fresh", "premium", "exclusive", "special", "discover", "more",
+}
+
+
+def caption_emphasis(text: str) -> list[str]:
+    words = re.findall(r"[A-Za-z0-9À-ÿ']+", str(text or ""))
+    return [word for word in words if word.lower() in EMPHASIS_WORDS]
+
+
+def enrich_caption(cap: dict[str, Any]) -> dict[str, Any]:
+    out = dict(cap)
+    emphasis = caption_emphasis(out.get("text", ""))
+    out["emphasis"] = emphasis
+    out["style"] = "emphasis" if emphasis else "normal"
+    return out
