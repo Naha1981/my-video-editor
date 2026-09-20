@@ -23,7 +23,7 @@ Turn a natural-language creative brief into an executable video edit:
 
 NahaVideo is designed to run locally and evolve toward CPU-friendly/open-source AI components.
 
-Current milestone: v0.21 Browser Asset Scout + NahaLLM.
+Current milestone: v0.23 One-click customer production flow + Browser Asset Scout + NahaLLM.
 
 ## Status
 
@@ -44,6 +44,13 @@ The editor now has a model-optional intelligence layer:
 ### Optional model setup
 
 Install `requirements-models.txt`, then enable the adapters with environment variables documented in `plan.md`.
+
+
+## v0.23 — One-click customer production flow
+- Added a customer-first quick-create workflow: footage + optional website + creative outcome + format → automatic production.
+- Website understanding and public asset scouting now run behind the customer workflow instead of requiring manual stage-by-stage operation.
+- The Director automatically builds the story, checks footage gaps, searches missing stock when Jev is enabled, renders a delivery pack, and surfaces only the human decision that cannot safely be automated: stock provenance/license approval.
+- Advanced Director controls remain available for operators who want to inspect rankings, gaps, stock provenance, or edit the timeline manually.
 
 
 ## v0.20 shipped
