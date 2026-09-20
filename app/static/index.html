@@ -27,7 +27,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Local-first creative editing engine</div></div>
-  <div class="muted">v0.17</div>
+  <div class="muted">v0.18</div>
 </div>
 
 <div class="grid">
@@ -253,7 +253,9 @@ async function renderVideo(){
       music_id:musicId,logo_id:logoId
     })});
   const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
-  $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a>';
+  const qc=data.delivery_qc||{};
+  const qct=qc.status==='verified'?' · FFmpeg Skill QA verified':qc.status==='fallback_only'?' · native FFmpeg fallback':' · QA '+esc(qc.status||'unknown');
+  $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a><span class="metric">'+qct+'</span>';
 }
 </script>
 </body>
