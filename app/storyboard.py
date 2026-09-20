@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from .captions import build_caption_track
+from .captions import build_caption_track, enrich_caption, caption_rhythm
 
 
 def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -79,6 +79,7 @@ def add_transcript_captions(plan: dict[str, Any]) -> dict[str, Any]:
             for cap in build_caption_track([{"start": max(start, source_start), "end": min(end, source_end), "text": str(segment.get("text", ""))}]):
                 from .captions import enrich_caption
                 enriched = enrich_caption({"start": round(output_offset + cap["start"] - source_start, 3), "end": round(output_offset + cap["end"] - source_start, 3), "text": cap["text"]})
+                enriched = caption_rhythm(enriched, beat_times=plan.get("audio", {}).get("music_beats", []), creative_intent=item.get("creative_intent"))
                 captions.append(enriched)
         output_offset += float(item.get("duration", 0))
     result["captions"] = [x for x in captions if x["text"]]
