@@ -19,7 +19,7 @@ def test_plan_is_30_seconds():
     )
     assert plan["settings"]["priority"] == "food"
     assert plan["settings"]["logo_ending"] is True
-    assert plan["version"] == "0.3"
+    assert plan["version"] == "0.5"
     assert plan["edit_decision_graph"]
     assert plan["timeline"]
 
@@ -104,3 +104,19 @@ def test_v04_captions_are_mapped_to_output_time():
     out = add_transcript_captions(plan)
     assert out["captions"][0]["text"] == "Fresh from our kitchen"
     assert out["captions"][0]["start"] == 1.0
+
+
+def test_website_brief_compiler_is_deterministic():
+    from app.brief import compile_creative_brief
+    site={"url":"https://example.com","domain":"example.com","title":"Gemelli Kitchen","meta":{"description":"Premium restaurant dining and reservations"},"text":"Fresh food, chef, menu and table bookings."}
+    brief=compile_creative_brief(site)
+    assert brief["category"] == "restaurant"
+    assert brief["cta"] == "Book your table"
+    assert brief["business_name"] == "Gemelli Kitchen"
+
+
+def test_stock_requirements_follow_category():
+    from app.stock import shot_requirements
+    req=shot_requirements({"category":"restaurant"})
+    assert req[0]["beat"] == "hook"
+    assert any("customer" in x["need"].lower() for x in req)
