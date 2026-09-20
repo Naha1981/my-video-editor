@@ -151,6 +151,8 @@ def render_video(req: RenderRequest):
         set(clips.keys()),
         float(req.plan.get("settings", {}).get("duration", 180))
     )
+    clean_plan["storyboard"] = build_storyboard(clean_plan)
+    clean_plan = add_transcript_captions(clean_plan)
     rid = uuid4().hex[:12]
     output = MEDIA / f"nahavideo_{rid}.mp4"
     try:
