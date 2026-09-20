@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from .media import ffprobe, analyze_media, render
 from .director import Clip, build_plan, sanitize_plan
+from .storyboard import build_storyboard, add_transcript_captions
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
