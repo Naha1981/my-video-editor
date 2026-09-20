@@ -250,7 +250,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.14",
+        "version": "0.15",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
@@ -276,6 +276,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         "branding": {"logo_id": None},
         "notes": [
             "v0.5 combines local media intelligence with a website-to-creative-brief intake layer.",
+            "v0.15 adds temporal per-shot semantic windows so intent scoring can identify the strongest evidence inside each detected scene.",
             "Model adapters are optional; the CPU-only heuristic path remains usable without model downloads.",
             "Timeline entries are intentionally editable before rendering; derived captions/storyboard are rebuilt from the edited timeline.",
         ],
