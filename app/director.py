@@ -148,8 +148,9 @@ def _mapped_duck_ranges(item: dict[str, Any], clip: Clip, output_offset: float) 
     return mapped
 
 
-def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
+def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction: dict[str, Any] | None = None) -> dict[str, Any]:
     settings = brief_settings(prompt, duration)
+    creative_direction = creative_direction or {}
     scored = []
     for clip in clips:
         score, reasons = score_clip(clip, settings)
@@ -218,6 +219,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int) -> dict[str, Any]:
         "version": "0.5",
         "prompt": prompt,
         "settings": settings,
+        "creative_direction": creative_direction,
         "shots_ranked": [
             {
                 "id": x["clip"].id,
