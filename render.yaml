@@ -2,9 +2,9 @@ services:
   - type: web
     name: nahavideo-ai-director
     runtime: docker
-    repo: https://github.com/Naha1981/my-video-editor
-    branch: main
     plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     autoDeployTrigger: commit
     healthCheckPath: /api/health
     envVars:
