@@ -38,13 +38,45 @@ def _write_srt(path: Path, captions: list[dict[str, Any]]) -> Path | None:
     return path
 
 
-def _subtitle_filter(path: Path, zone: dict[str, Any]) -> str:
-    value=path.as_posix().replace("\\","/").replace(":","\\:").replace("'","\\'")
-    return (
-        f"subtitles='{value}':force_style='FontName=Arial,FontSize={zone['font_size']},"
-        f"PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,"
-        f"Shadow=0,Alignment={zone['alignment']},MarginV={zone['margin_v']}'"
+def _ass_ts(value: float) -> str:
+    value=max(0.0,float(value))
+    h=int(value//3600); m=int((value%3600)//60); s=value%60
+    return f"{h}:{m:02d}:{s:05.2f}"
+
+
+def _write_ass(path: Path, captions: list[dict[str, Any]], zone: dict[str, Any], offset: float = 0.0, duration: float | None = None) -> Path | None:
+    local=[]
+    end_limit=None if duration is None else float(duration)
+    for item in captions:
+        start=float(item.get("start",0))-offset
+        end=float(item.get("end",start))-offset
+        if end<=0 or start>= (end_limit if end_limit is not None else float("inf")):
+            continue
+        start=max(0.0,start); end=min(end,end_limit) if end_limit is not None else end
+        text=str(item.get("text","")).strip()
+        if not text or end<=start: continue
+        emphasis={str(x).lower() for x in item.get("emphasis",[])}
+        words=text.split()
+        rendered=[]
+        for word in words:
+            clean=word.strip(".,!?;:")
+            rendered.append(r"{\\b1\\fs%d}%s{\\b0\\fs%d}" % (zone["font_size"]+2, word, zone["font_size"]) if clean.lower() in emphasis else word)
+        local.append((_ass_ts(start),_ass_ts(end)," ".join(rendered)))
+    if not local: return None
+    path.write_text(
+        "[Script Info]\\nScriptType: v4.00+\\nPlayResX: 1920\\nPlayResY: 1080\\n"
+        "[V4+ Styles]\\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\\n"
+        f"Style: Default,Arial,{zone['font_size']},&H00FFFFFF,&H00FFFFFF,&H80000000,&H80000000,0,0,1,2,0,{zone['alignment']},40,40,{zone['margin_v']},1\\n"
+        "[Events]\\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\\n"
+        + "".join(f"Dialogue: 0,{a},{b},Default,,0,0,0,,{t}\\n" for a,b,t in local),
+        encoding="utf-8"
     )
+    return path
+
+
+def _subtitle_filter(path: Path) -> str:
+    value=path.as_posix().replace("\\","/").replace(":","\\:").replace("'","\\'")
+    return f"ass='{value}'"
 
 FORMATS = {
     "9:16": (1080, 1920),
@@ -83,7 +115,7 @@ def render_variants(
         output = output_dir / f"{source.stem}_{slug}.mp4"
         focal_records = []
         zone = caption_safe_zone(aspect)
-        srt = _write_srt(output_dir / f"{slug}_captions.srt", captions or [])
+        srt = None  # Captions are rendered per shot with local timestamps.
         part_paths = []
         cursor = 0.0
         work = output_dir / f"{slug}_parts"
@@ -94,9 +126,11 @@ def render_variants(
                 focal = focal_point(source, cursor + min(0.05, duration / 2))
                 focal_records.append({"index": i, "start": round(cursor, 3), "duration": round(duration, 3), **focal})
                 part = work / f"part_{i:03d}.mp4"
+                shot_captions = _write_ass(work / f"captions_{i:03d}.ass", captions or [], zone, offset=cursor, duration=duration)
+                vf = crop_filter(width, height, focal) + ("," + _subtitle_filter(shot_captions) if shot_captions else "")
                 ok, err = _run([
                     "ffmpeg", "-y", "-v", "error", "-ss", str(cursor), "-i", str(source),
-                    "-t", str(duration), "-vf", crop_filter(width, height, focal) + ("," + _subtitle_filter(srt, zone) if srt else ""),
+                    "-t", str(duration), "-vf", vf,
                     "-r", "30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
                     "-c:a", "aac", "-ar", "48000", "-ac", "2", str(part),
                 ])
