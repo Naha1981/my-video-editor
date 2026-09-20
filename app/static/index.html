@@ -36,7 +36,7 @@ h1 em{font-style:normal;color:#fff;text-shadow:0 0 50px rgba(224,115,61,.18)}
 .heroMeta span:before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#6f7676;margin:0 7px 2px 0}.heroMeta span:first-child:before{background:var(--green)}
 .heroVisual{position:absolute;inset:6vh 0 0 0;overflow:hidden;z-index:1}
 .heroVisual:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,6,7,.88) 0,rgba(5,6,7,.38) 43%,rgba(5,6,7,.12) 70%,rgba(5,6,7,.35) 100%)}
-.videoWall{position:absolute;left:50%;top:6%;width:min(1080px,75vw);height:720px;transform:translateX(-8%) perspective(1200px) rotateY(-12deg) rotateX(3deg);transform-style:preserve-3d;filter:saturate(.86) contrast(1.04)}
+.videoWall{position:absolute;left:50%;top:6%;width:min(1080px,75vw);height:720px;transform:translate(calc(-8% + var(--px,0px)) translateY(var(--py,0px)) perspective(1200px) rotateY(-12deg) rotateX(3deg);transform-style:preserve-3d;filter:saturate(.86) contrast(1.04)}
 .wallCard{position:absolute;width:31%;aspect-ratio:9/14;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.13);box-shadow:0 35px 80px rgba(0,0,0,.45);transform-style:preserve-3d}
 .wallCard:before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.13),transparent 32%,transparent 68%,rgba(255,255,255,.04));z-index:2;pointer-events:none}
 .wallCard .scene{position:absolute;inset:0;animation:sceneDrift 7s ease-in-out infinite alternate}
@@ -158,6 +158,11 @@ h1 em{font-style:normal;color:#fff;text-shadow:0 0 50px rgba(224,115,61,.18)}
 <script>
 const nav=document.getElementById('nav');
 addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>28),{passive:true});
+const wall=document.querySelector('.videoWall');
+const centerFrame=document.querySelector('.centerFrame');
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  addEventListener('pointermove',e=>{const x=(e.clientX/innerWidth-.5),y=(e.clientY/innerHeight-.5);wall.style.setProperty('--px',(x*10).toFixed(2)+'px');wall.style.setProperty('--py',(y*7).toFixed(2)+'px');centerFrame.style.marginLeft=(x*8).toFixed(1)+'px';centerFrame.style.marginTop=(y*5).toFixed(1)+'px';},{passive:true});
+}
 const scenes=[
   ['HERO / STRONGEST FOOD SHOT','visual intent fit · 91%'],
   ['CRAFT / SHOW THE MAKING','visual intent fit · 84%'],
