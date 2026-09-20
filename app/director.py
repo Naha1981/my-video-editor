@@ -238,7 +238,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.9",
+        "version": "0.10",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
