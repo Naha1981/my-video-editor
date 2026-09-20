@@ -71,10 +71,17 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Unmatched creative beats are explicitly recorded instead of silently inventing footage.
 - Storyboard reads the actual timeline intent, preserving sequence decisions after edits.
 - UI exposes the Director's ordered story sequence before rendering.
-- API version is 0.9.0.
+- API version is 0.10.0.
 
 ## Next — v0.10 Stock/B-roll Gap Detection
 - Compare required creative beats against available footage.
 - Identify missing required shots such as CTA/exterior or proof footage.
 - Generate practical stock-footage search requirements from the missing intent.
 - Keep the gap report explainable and editable before rendering.
+
+
+## v0.10 — Stock/B-roll Gap Detection
+- Added an explainable footage-gap detector comparing required brief beats with the selected creative sequence and available semantic evidence.
+- Required gaps such as missing CTA/exterior footage are surfaced explicitly instead of being silently substituted.
+- Each missing beat includes a practical stock/B-roll search hint and semantic intent-fit evidence.
+- Plan API exposes `footage_gaps`; the UI surfaces required gaps before rendering.
