@@ -196,3 +196,13 @@ NahaVideo Web Service
     ├── optional NahaLLM client ──> NahaLLM Web Service
     └── optional Jev client ──────> Jev Browser Worker ──> Chromium / Browser Harness
 ```
+
+
+## v0.22 — Automatic Asset Acquisition + Stock Scout
+- Extended Jev Asset Scout to expose directly loaded public video media in addition to image/link candidates.
+- Added a safety-bounded public asset collector with domain allowlisting, redirect validation, private-network blocking, content-type allowlisting and maximum download size.
+- Downloaded video candidates are registered as pending stock with source provenance; they are never auto-approved for final use.
+- Added Jev-driven stock missions for Director-detected missing footage across Pexels, Pixabay and Mixkit search destinations.
+- Added a one-click NahaLabs stock scout so missing footage can be searched and candidate media collected without manual stock-site browsing.
+- Approved collected stock now flows through the existing Director and delivery-pack paths.
+- Existing renderer, Director, provenance model and feature-flag fallback remain intact.
