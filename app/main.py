@@ -16,12 +16,13 @@ from .creative import creative_direction
 from .gaps import detect_footage_gaps
 from .beats import detect_beats
 from .pacing import align_cut_boundaries
+from .motion import render_brand_card
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.13.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.14.0")
 
 
 class PlanRequest(BaseModel):
@@ -54,7 +55,7 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.13.0"}
+    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.14.0", "motion_engine": "injected-or-ffmpeg-fallback"}
 
 
 @app.post("/api/brief-from-url")
