@@ -21,12 +21,13 @@ from .stock_search import build_stock_manifest
 from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stock_public
 from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
+from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.19.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.20.0")
 
 
 class PlanRequest(BaseModel):
@@ -48,6 +49,7 @@ class RenderRequest(BaseModel):
     logo_id: str | None = None
     captions: bool = True
     platform: str = "reels"
+    platforms: list[str] = []
 
 
 class BriefRequest(BaseModel):
@@ -80,6 +82,7 @@ def health():
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
+        "delivery_pack": "ready",
     }
 
 
@@ -270,13 +273,61 @@ def render_video(req: RenderRequest):
         render(MEDIA, clean_plan, clips, output, music, logo, captions=req.captions)
     except Exception as e:
         raise HTTPException(500, str(e))
+    requested_platforms = normalize_platforms(req.platforms or [req.platform])
     delivery_qc = verify_output(output, req.platform)
+    delivery_pack = build_delivery_pack(requested_platforms)
+    if len(requested_platforms) > 1:
+        delivery_pack["note"] = "Base render is complete; use /api/render-pack to generate all requested platform outputs."
     return {
         "id": rid,
         "download": f"/api/render/{rid}",
         "plan": clean_plan,
         "delivery_qc": delivery_qc,
+        "delivery_pack": delivery_pack,
     }
+
+
+@app.post("/api/render-pack")
+def render_pack(req: RenderRequest):
+    clips = {cid: _find_media(cid) for cid in req.clip_ids}
+    clips = {k: v for k, v in clips.items() if v}
+    if not clips:
+        raise HTTPException(404, "No clips found")
+    music = _find_media(req.music_id) if req.music_id else None
+    logo = _find_media(req.logo_id) if req.logo_id else None
+    clean_plan = sanitize_plan(
+        req.plan,
+        set(clips.keys()),
+        float(req.plan.get("settings", {}).get("duration", 180))
+    )
+    clean_plan["storyboard"] = build_storyboard(clean_plan)
+    clean_plan = add_transcript_captions(clean_plan)
+    rid = uuid4().hex[:12]
+    base_output = MEDIA / f"nahavideo_pack_base_{rid}.mp4"
+    try:
+        render(MEDIA, clean_plan, clips, base_output, music, logo, captions=req.captions)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    platforms = normalize_platforms(req.platforms or [req.platform])
+    pack_dir = MEDIA / f"delivery_{rid}"
+    pack = render_delivery_pack(base_output, pack_dir, platforms)
+    base_qc = verify_output(base_output, req.platform)
+    return {
+        "id": rid,
+        "base_download": f"/api/render-pack/{rid}/base",
+        "plan": clean_plan,
+        "platforms": platforms,
+        "base_qc": base_qc,
+        "delivery_pack": pack,
+    }
+
+
+@app.get("/api/render-pack/{rid}/base")
+def download_pack_base(rid: str):
+    path = MEDIA / f"nahavideo_pack_base_{rid}.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Base render not found")
+    return FileResponse(path, media_type="video/mp4", filename=path.name)
 
 
 @app.get("/api/render/{rid}")
