@@ -23,13 +23,13 @@ Turn a natural-language creative brief into an executable video edit:
 
 NahaVideo is designed to run locally and evolve toward CPU-friendly/open-source AI components.
 
-Current milestone: v0.2 foundation.
+Current milestone: v0.5 website-to-ad pipeline.
 
 ## Status
 
 See `plan.md` for the implementation roadmap.
 
-## v0.3 AI Director
+## v0.5 AI Director
 
 The editor now has a model-optional intelligence layer:
 
@@ -44,3 +44,17 @@ The editor now has a model-optional intelligence layer:
 ### Optional model setup
 
 Install `requirements-models.txt`, then enable the adapters with environment variables documented in `plan.md`.
+
+
+## v0.5 shipped
+- Local website URL intake extracts title, description and visible text using the Python standard library.
+- Deterministic creative-brief compiler produces business category, offer, audience, tone, CTA and visual requirements.
+- Stock-shot requirement generator turns the brief into a practical footage shopping list.
+- Timeline rendering now preserves clip/logo order.
+- Transcript captions can be burned into the rendered MP4 and are rebuilt after timeline edits.
+- NahaLabs motion graphics now has an explicit adapter seam so the proprietary motion engine can replace the FFmpeg fallback.
+
+### Website workflow
+Client website URL → Brand intake → Creative brief → Shot requirements → Footage → AI Director → Storyboard → Captions → NahaLabs motion graphics → MP4
+
+The website intake is intentionally deterministic and local-first. It does not claim to understand a site with an external LLM; the extracted brief remains editable and can later be connected to a local model.
