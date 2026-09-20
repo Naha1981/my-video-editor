@@ -64,7 +64,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 </main>
 
 <script>
-let clips=[],plan=null,musicId=null,logoId=null;
+let clips=[],plan=null,musicId=null,logoId=null,creativeDirection=null;
 const $=id=>document.getElementById(id);
 const fmt=s=>Number(s).toFixed(1)+'s';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -94,6 +94,7 @@ async function loadBrief(){
   const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value})});
   const data=await r.json(); if(!r.ok){$('briefStatus').textContent=data.detail||'Website intake failed';return}
   const b=data.creative_brief;
+  creativeDirection=b.direction||null;
   $('briefSummary').textContent=b.business_name+' · '+b.category+' · CTA: '+b.cta+' · '+b.tone;
   $('prompt').value='Create a '+b.tone+' '+b.category+' advertisement. Offer: '+b.offer+'. Audience: '+b.audience+'. CTA: '+b.cta+'. Use '+b.visual_keywords.join(', ')+'. Remove dead time, keep the pacing engaging, and finish with the brand.';
   $('briefStatus').textContent='Brand brief ready. Director prompt updated.';
@@ -115,14 +116,16 @@ async function makePlan(){
   $('status').textContent='Director is building the edit decision graph…';
   musicId=await uploadMusic();logoId=await uploadLogo();
   const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({prompt:$('prompt').value,duration:30,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId})});
+    body:JSON.stringify({prompt:$('prompt').value,duration:30,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId,creative_direction:creativeDirection})});
   plan=await r.json();if(!r.ok){$('status').textContent=plan.detail||JSON.stringify(plan);return}
   renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
+  const chosen=plan.creative_direction?.selected;
+  if(chosen) $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
   $('renderBtn').disabled=false;
 }
 
 function renderPlan(){
-  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">'+esc(b.purpose)+'</div></div>').join('');
+  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
     const sem=x.analysis?.semantic?.top_labels||[],tr=x.analysis?.transcript||{};
     return '<div class="rank"><div class="score">'+x.score+'</div><div><b>'+(i+1)+'. '+esc(x.filename)+'</b>'+
