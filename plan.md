@@ -233,3 +233,11 @@ NahaVideo Web Service
 - Provenance remains attached to the original source URL/provider before any later approval/import workflow.
 - Added browser UI for Paste URL → Import Media.
 - Cobalt remains an optional acquisition adapter; NahaVideo's Director does not depend on it.
+
+
+## v0.26 — Production Final QA
+- Added a deterministic final QA gate before delivery.
+- Checks required creative coverage, source-file availability, stock approval, stock provenance and timeline duration.
+- Added `/api/final-qa` and a visible Final QA panel.
+- QA produces explicit pass/block states rather than silently rendering an unsafe plan.
+- Cobalt remains an acquisition layer; approval and provenance remain mandatory.
