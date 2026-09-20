@@ -43,6 +43,10 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   </div>
 </div>
 
+<section id="authGate" class="panel wide" style="display:none">
+  <div class="projectHead"><div><h2 style="margin:0">Operator sign-in</h2><div class="metric">This deployment requires authentication before editing or rendering.</div></div><div class="projectActions"><input id="authPassword" type="password" placeholder="Operator password"><button class="secondary" onclick="loginOperator()">Sign in</button></div></div>
+  <div id="authStatus" class="status"></div>
+</section>
 <section class="panel wide quick">
   <h1>Create your video</h1>
   <div class="sub">Upload the footage and tell NahaVideo what the video should achieve. The Director handles the research, edit plan, missing B-roll and rendering for you.</div>
@@ -182,7 +186,28 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <script>
 let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null,quickMusicFile=null,quickLogoFile=null;
 
-function renderRationale(){const box=$('rationale');if(!box)return;const rows=plan?.edit_rationale||[];box.innerHTML=rows.length?rows.map(x=>'<div class="clip"><div class="clipTop"><b>'+escapeHtml(x.decision||'Director decision')+'</b><span class="badge ai">'+escapeHtml(x.confidence||'heuristic')+'</span></div><div class="metric">'+escapeHtml(x.why||'')+'</div></div>').join(''):'No rationale available yet.';}\n\nasync function saveProject(){
+function renderRationale(){const box=$('rationale');if(!box)return;const rows=plan?.edit_rationale||[];box.innerHTML=rows.length?rows.map(x=>'<div class="clip"><div class="clipTop"><b>'+escapeHtml(x.decision||'Director decision')+'</b><span class="badge ai">'+escapeHtml(x.confidence||'heuristic')+'</span></div><div class="metric">'+escapeHtml(x.why||'')+'</div></div>').join(''):'No rationale available yet.';}\n\nasync async function checkAuth(){
+  try{
+    const r=await fetch('/api/auth/status');
+    const d=await r.json();
+    if(d.required && !d.authenticated){
+      $('authGate').style.display='block';
+      document.querySelectorAll('#advancedWrap,.projectPanel,.quick').forEach(el=>{if(el)el.style.opacity='.45';});
+    }else{
+      $('authGate').style.display='none';
+      document.querySelectorAll('#advancedWrap,.projectPanel,.quick').forEach(el=>{if(el)el.style.opacity='1';});
+    }
+  }catch(e){}
+}
+async function loginOperator(){
+  const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('authPassword').value})});
+  const d=await r.json();
+  if(!r.ok){$('authStatus').textContent=d.detail||'Sign-in failed';return;}
+  $('authStatus').textContent='Signed in.';
+  $('authPassword').value='';
+  await checkAuth();
+}
+function saveProject(){
   if(!plan){$('projectStatus').textContent='Build a Director plan before saving.';return;}
   const name=$('projectName').value.trim()||'NahaVideo project';
   $('projectStatus').textContent='Saving…';
@@ -699,5 +724,5 @@ async function renderPack(automatic=false){
 <script>
 (async()=>{try{const r=await fetch('/api/health');const d=await r.json();window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled)}catch(e){window.NAHAVIDEO_JEV_ENABLED=false}})();
 </script>
-<script>refreshProjects();</script></body>
+<script>checkAuth();refreshProjects();</script></body>
 </html>
