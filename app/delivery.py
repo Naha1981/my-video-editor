@@ -109,3 +109,94 @@ def render_delivery_pack(
         "engine": "ffmpeg-skill",
         "results": results,
     }
+
+
+def validate_final_plan(
+    plan: dict[str, Any],
+    clips: dict[str, Path],
+    *,
+    approved_stock_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Production gate: return explicit blockers/warnings before final rendering."""
+    timeline = [x for x in plan.get("timeline", []) if x.get("enabled", True) is not False]
+    checks: list[dict[str, Any]] = []
+    approved = approved_stock_ids or set()
+
+    required_gaps = int((plan.get("footage_gaps") or {}).get("required_gap_count", 0) or 0)
+    checks.append({
+        "id": "required_coverage",
+        "status": "pass" if required_gaps == 0 else "block",
+        "message": "All required creative beats are covered." if required_gaps == 0 else f"{required_gaps} required footage gap(s) remain.",
+    })
+
+    missing = [x for x in timeline if x.get("type") == "clip" and x.get("clip_id") not in clips]
+    checks.append({
+        "id": "source_files",
+        "status": "pass" if not missing else "block",
+        "message": "All timeline source files exist." if not missing else f"{len(missing)} timeline source file(s) are missing.",
+    })
+
+    pending = []
+    for item in timeline:
+        if item.get("type") != "clip":
+            continue
+        clip = clips.get(item.get("clip_id"))
+        if not clip:
+            continue
+        stock = (item.get("stock") or {})
+        sidecar = clip.with_suffix(clip.suffix + ".stock.json")
+        if sidecar.exists():
+            try:
+                import json
+                stock = json.loads(sidecar.read_text(encoding="utf-8"))
+            except Exception:
+                stock = {}
+        if stock.get("kind") == "stock" and (not stock.get("approved") or item.get("clip_id") not in approved):
+            pending.append(item.get("clip_id"))
+    checks.append({
+        "id": "stock_approval",
+        "status": "pass" if not pending else "block",
+        "message": "All stock in the final timeline is approved." if not pending else f"{len(set(pending))} stock asset(s) are pending approval.",
+    })
+
+    provenance_missing = []
+    for cid in set(pending):
+        pass
+    for item in timeline:
+        if item.get("type") != "clip":
+            continue
+        clip = clips.get(item.get("clip_id"))
+        if not clip:
+            continue
+        sidecar = clip.with_suffix(clip.suffix + ".stock.json")
+        if sidecar.exists():
+            try:
+                import json
+                stock = json.loads(sidecar.read_text(encoding="utf-8"))
+            except Exception:
+                stock = {}
+            if stock.get("kind") == "stock" and (not stock.get("provider") or not stock.get("source_url")):
+                provenance_missing.append(item.get("clip_id"))
+    checks.append({
+        "id": "stock_provenance",
+        "status": "pass" if not provenance_missing else "block",
+        "message": "Stock provenance is complete." if not provenance_missing else f"{len(set(provenance_missing))} stock asset(s) lack provider/source provenance.",
+    })
+
+    duration = sum(float(x.get("duration", 0) or 0) for x in timeline)
+    requested = float((plan.get("settings") or {}).get("duration", 0) or 0)
+    duration_ok = requested <= 0 or (0.1 <= duration <= requested + 0.5)
+    checks.append({
+        "id": "timeline_duration",
+        "status": "pass" if duration_ok else "block",
+        "message": f"Timeline duration is {duration:.2f}s for a {requested:.2f}s request." if requested else f"Timeline duration is {duration:.2f}s.",
+    })
+
+    blocker_count = sum(x["status"] == "block" for x in checks)
+    warning_count = sum(x["status"] == "warn" for x in checks)
+    return {
+        "status": "blocked" if blocker_count else ("warning" if warning_count else "ready"),
+        "blocker_count": blocker_count,
+        "warning_count": warning_count,
+        "checks": checks,
+    }
