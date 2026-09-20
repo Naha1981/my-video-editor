@@ -2,15 +2,39 @@ services:
   - type: web
     name: nahavideo-ai-director
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    autoDeployTrigger: commit
-    healthCheckPath: /api/health
+    branch: main
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/ready
+    maxShutdownDelaySeconds: 300
+    disk:
+      name: nahavideo-data
+      mountPath: /var/data
+      sizeGB: 10
     envVars:
       - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: NAHAVIDEO_DATA_DIR
+        value: /var/data
+      - key: NAHAVIDEO_HSTS
         value: "1"
       - key: NAHAVIDEO_ENABLE_TRANSCRIBE
         value: "0"
       - key: NAHAVIDEO_ENABLE_VISION
         value: "0"
+      - key: NAHAVIDEO_ENABLE_AUDIO_INTELLIGENCE
+        value: "0"
+      - key: NAHAVIDEO_RENDER_PROFILE
+        value: render_free
+      - key: NAHAVIDEO_RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: NAHAVIDEO_MAX_VIDEO_UPLOAD_BYTES
+        value: "262144000"
+      - key: NAHAVIDEO_MAX_STOCK_UPLOAD_BYTES
+        value: "262144000"
+      - key: NAHAVIDEO_MAX_AUDIO_UPLOAD_BYTES
+        value: "104857600"
+      - key: NAHAVIDEO_MAX_LOGO_UPLOAD_BYTES
+        value: "10485760"
