@@ -306,3 +306,10 @@ NahaVideo Web Service
 - Added an edit-rationale layer explaining major shot/brand decisions with evidence and confidence.
 - Preserved the full production workspace at /editor.html.
 - Rebuilt / as a cinematic NahaVideo product landing page with an animated, editor-like product hero, active timeline, Director telemetry, workflow narrative and responsive motion.
+
+
+## v0.39 — Cinematic Streaming-Style Landing
+- Replaced the previous landing page with a cinematic, Netflix-inspired streaming composition without copying its branding or UI.
+- Full-bleed hero with animated 3D video wall, live Director viewport, scanning/playhead motion and rotating decision telemetry.
+- Added horizontal product rails, interactive hover cards, live Director demo activity and responsive/reduced-motion behavior.
+- Kept the production editor on /editor.html so the marketing experience and working editor remain distinct.
