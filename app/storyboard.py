@@ -4,6 +4,17 @@ from typing import Any
 from .captions import build_caption_track, enrich_caption, caption_rhythm
 
 
+def transition_for(previous: dict[str, Any] | None, current: dict[str, Any], index: int) -> str:
+    """Choose a restrained transition from creative context."""
+    if current.get("type") == "logo":
+        return "fade"
+    if not previous:
+        return "hard_cut"
+    if current.get("creative_intent") == "cta" or previous.get("creative_intent") == "cta":
+        return "fade"
+    return "hard_cut"
+
+
 def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
     """Turn an edit plan into explicit creative beats for the renderer/UI."""
     beats = []
@@ -11,6 +22,7 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
     selected = direction.get("selected", {}) or {}
     sequence = selected.get("shot_sequence", [])
     active = [x for x in plan.get("timeline", []) if x.get("enabled", True)]
+    previous = None
     for i, item in enumerate(active):
         if item.get("type") == "logo":
             beats.append({
@@ -28,7 +40,7 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
         intent = item.get("creative_intent") or (sequence[min(i, len(sequence) - 1)] if sequence else None)
         if i == 0:
             purpose = "hook"
-            transition = "hard_cut"
+            transition = transition_for(previous, item, i)
         elif "speech" in reasons:
             purpose = "message"
             transition = "hard_cut"
@@ -52,6 +64,7 @@ def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
             "intent_fit": item.get("intent_fit", 0),
             "selection_score": item.get("score", 0),
         })
+        previous = item
     return beats
 
 
