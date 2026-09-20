@@ -104,7 +104,11 @@ OPERATING_LOOP = ["find", "understand", "act", "learn"]
 
 
 def _tokens(prompt: str) -> list[str]:
-    return [x for x in re.split(r"[\s,/]+", (prompt or "").strip().lower()) if x]
+    return [
+        re.sub(r"[^a-z0-9]+", "_", x).strip("_")
+        for x in re.split(r"[\s,/]+", (prompt or "").strip().lower())
+        if x
+    ]
 
 
 def _slug(value: str) -> str:
@@ -118,19 +122,19 @@ def parse_commands(command: str = "", prompt: str = "") -> dict[str, Any]:
 
     product = None
     for key in PRODUCTS:
-        if key in tokens or f"/{key}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
             product = key
             break
 
     objective = None
     for key in OBJECTIVES:
-        if key in tokens or f"/{key}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
             objective = key
             break
 
     format_name = None
     for key in FORMATS:
-        if key in tokens or f"/{key}" in raw.lower():
+        if key in tokens or f"/{key}" in raw.lower() or f"/{key.replace("_", "-")}" in raw.lower():
             format_name = key
             break
 
