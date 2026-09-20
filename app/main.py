@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.29.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.30.0")
 
 
 class PlanRequest(BaseModel):
@@ -103,7 +103,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.29.0",
+        "version": "0.30.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
@@ -487,7 +487,7 @@ def variants(req: RenderRequest):
         render(MEDIA, clean_plan, clips, base, music, logo, captions=req.captions)
     except Exception as exc:
         raise HTTPException(500, str(exc))
-    result = render_variants(base, MEDIA / f"variants_{rid}", ["9:16", "1:1", "16:9"])
+    result = render_variants(base, MEDIA / f"variants_{rid}", ["9:16", "1:1", "16:9"], timeline=clean_plan.get("timeline", []))
     return {"id": rid, "qa": qa, "variants": result, "base_download": f"/api/variants/{rid}/base"}
 
 @app.post("/api/render")
