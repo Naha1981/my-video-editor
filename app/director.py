@@ -177,9 +177,16 @@ def _mapped_duck_ranges(item: dict[str, Any], clip: Clip, output_offset: float) 
     return mapped
 
 
-def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_plan(
+    clips: list[Clip],
+    prompt: str,
+    duration: int,
+    creative_direction: dict[str, Any] | None = None,
+    naha_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     settings = brief_settings(prompt, duration)
     creative_direction = creative_direction or {}
+    naha_context = naha_context or {}
     scored = []
     for clip in clips:
         score, reasons = score_clip(clip, settings, creative_direction)
@@ -250,10 +257,11 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.17",
+        "version": "0.19",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
+        "naha_context": naha_context,
         "shots_ranked": [
             {
                 "id": x["clip"].id,
@@ -276,6 +284,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         "branding": {"logo_id": None},
         "notes": [
             "v0.5 combines local media intelligence with a website-to-creative-brief intake layer.",
+            "v0.19 adds NahaLabs lane/product/objective/format/authenticity context so creative intent can be reused across campaigns and production surfaces.",
             "v0.15 adds temporal per-shot semantic windows so intent scoring can identify the strongest evidence inside each detected scene.",
             "v0.17 adds approved stock assets as provenance-aware first-class footage; exact stock intent can fill an explicitly detected creative gap.",
             "Model adapters are optional; the CPU-only heuristic path remains usable without model downloads.",
