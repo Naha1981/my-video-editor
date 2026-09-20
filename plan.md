@@ -223,3 +223,13 @@ NahaVideo Web Service
 - The Director re-runs sequence selection, footage-gap detection, pacing and captions with approved stock as first-class footage.
 - Final delivery rendering uses only approved stock assets; pending stock remains excluded.
 - Preserves the provenance-first rule: approval is explicit and traceable before automatic story selection.
+
+
+## v0.25 — Cobalt Media Acquisition Adapter
+- Added an optional Cobalt integration for authorized URL-based media acquisition.
+- Cobalt is configured through `NAHAVIDEO_COBALT_API_URL` and is self-hosted-only by design; NahaVideo does not implicitly depend on a public Cobalt API.
+- Added an explicit authorization confirmation before media acquisition.
+- Cobalt responses are normalized into reviewable media candidates; picker responses remain choices and are not silently selected.
+- Provenance remains attached to the original source URL/provider before any later approval/import workflow.
+- Added browser UI for Paste URL → Import Media.
+- Cobalt remains an optional acquisition adapter; NahaVideo's Director does not depend on it.
