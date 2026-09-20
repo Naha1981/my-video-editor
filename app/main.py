@@ -50,6 +50,7 @@ class RenderRequest(BaseModel):
     captions: bool = True
     platform: str = "reels"
     platforms: list[str] = []
+    stock_asset_ids: list[str] = []
 
 
 class BriefRequest(BaseModel):
@@ -254,7 +255,8 @@ def plan(req: PlanRequest):
 
 @app.post("/api/render")
 def render_video(req: RenderRequest):
-    clips = {cid: _find_media(cid) for cid in req.clip_ids}
+    requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
+    clips = {cid: _find_media(cid) for cid in requested_ids}
     clips = {k: v for k, v in clips.items() if v}
     if not clips:
         raise HTTPException(404, "No clips found")
