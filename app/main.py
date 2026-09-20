@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.6.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.9.0")
 
 
 class PlanRequest(BaseModel):
@@ -50,7 +50,7 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.6.0"}
+    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.9.0"}
 
 
 @app.post("/api/brief-from-url")
