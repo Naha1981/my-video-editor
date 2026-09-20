@@ -124,3 +124,8 @@ The Jev worker uses the NahaLabs fork's browser policy and Browser Harness. Its 
 ### Resource note
 
 The Jev worker runs Chromium and Browser Harness and should be treated as a separate browser runtime. Do not force it into the 512 MB NahaVideo Free renderer. Validate browser startup and memory on the chosen Render service before treating it as production infrastructure.
+
+
+## Production profile
+
+The root render.yaml now defines the production service: paid Starter compute, a 10 GB persistent disk at /var/data, HTTP readiness at /api/ready, 300-second graceful shutdown and CI-gated auto-deploys. Render documents persistent disks as the mechanism for preserving service filesystem changes across deploys/restarts, and HTTP health checks as application-level readiness checks. citeturn250335search1turn250335search3turn217056view0
