@@ -133,3 +133,15 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Keeps stock acquisition explicit: the Director never silently invents or substitutes footage.
 - API plans now expose a stock manifest alongside footage gaps.
 - This adapter is the seam for future provider APIs and automatic asset ingestion.
+
+
+## v0.17 — Stock Asset Ingestion
+- Added a provenance-aware stock ingestion path for downloaded B-roll.
+- Attached stock assets carry provider, source URL, license, attribution, beat and creative intent metadata in a sidecar file.
+- Stock is explicitly approved by the user before the Director can select it automatically.
+- Approved stock with an exact creative intent match receives deterministic intent-fit priority, allowing it to fill a detected footage gap.
+- Pending/unapproved stock is excluded from automatic story selection.
+- The Director exposes attached stock provenance in the plan and preserves the source asset as a first-class clip.
+- The UI now supports attaching a downloaded stock clip, recording provenance and rebuilding the plan with the new asset.
+- Media lookup ignores provenance sidecars so metadata files can never be rendered as video.
+- Next media-execution layer: formal FFmpeg Skill adapter for probe → edit → verify without replacing the NahaVideo Director.
