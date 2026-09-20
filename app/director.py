@@ -48,13 +48,13 @@ def score_clip(clip: Clip, settings: dict[str, Any], creative_direction: dict[st
     creative_direction = creative_direction or {}
     selected = creative_direction.get("selected", {}) or {}
     intent_text = " ".join(str(x) for x in selected.get("shot_sequence", []))
+    reasons: list[str] = []
     if intent_text:
         hints = [x.replace("_", " ") for x in selected.get("shot_sequence", [])]
         hits = sum(1 for h in hints if h and any(part in name for part in h.split()))
         if hits:
             score += min(12, hits * 4)
             reasons.append("creative shot-intent filename signal")
-    reasons: list[str] = []
     keyword_groups = {
         "food": ["food", "dish", "meal", "burger", "pizza", "steak", "dessert", "plate", "chef", "kitchen", "restaurant"],
         "people": ["person", "people", "customer", "guest", "waiter"],
@@ -162,7 +162,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
     creative_direction = creative_direction or {}
     scored = []
     for clip in clips:
-        score, reasons = score_clip(clip, settings)
+        score, reasons = score_clip(clip, settings, creative_direction)
         scored.append({"clip": clip, "score": score, "reasons": reasons})
     scored.sort(key=lambda x: x["score"], reverse=True)
 
