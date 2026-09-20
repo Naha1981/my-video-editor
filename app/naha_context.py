@@ -100,6 +100,8 @@ GROWTH_LOOP = [
     "analytics",
 ]
 
+OPERATING_LOOP = ["find", "understand", "act", "learn"]
+
 
 def _tokens(prompt: str) -> list[str]:
     return [x for x in re.split(r"[\s,/]+", (prompt or "").strip().lower()) if x]
@@ -156,6 +158,7 @@ def parse_commands(command: str = "", prompt: str = "") -> dict[str, Any]:
         "authenticity_profile": AUTHENTICITY_PROFILE["id"] if authenticity else None,
         "authenticity": AUTHENTICITY_PROFILE if authenticity else None,
         "growth_loop": list(GROWTH_LOOP),
+        "operating_loop": list(OPERATING_LOOP),
         "raw_command": command.strip(),
     }
 
