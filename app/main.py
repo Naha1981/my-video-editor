@@ -19,17 +19,19 @@ from .pacing import align_cut_boundaries
 from .motion import render_brand_card
 from .stock_search import build_stock_manifest
 from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stock_public
+from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.18.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.19.0")
 
 
 class PlanRequest(BaseModel):
     prompt: str
+    command: str = ""
     duration: int = 30
     clip_ids: list[str]
     music_id: str | None = None
@@ -51,6 +53,7 @@ class RenderRequest(BaseModel):
 class BriefRequest(BaseModel):
     url: str
     prompt: str = ""
+    command: str = ""
 
 
 MEDIA_SUFFIXES = {
@@ -86,8 +89,10 @@ def brief_from_url(req: BriefRequest):
         site = fetch_brand(req.url)
         creative = compile_creative_brief(site, req.prompt)
         creative["shot_requirements"] = shot_requirements(creative)
-        creative["direction"] = creative_direction(creative, req.prompt)
-        return {"site": site, "creative_brief": creative}
+        naha_context = compile_context(req.command, req.prompt, creative)
+        creative["naha_context"] = naha_context
+        creative["direction"] = creative_direction(creative, req.prompt, naha_context)
+        return {"site": site, "creative_brief": creative, "naha_context": naha_context}
     except Exception as e:
         raise HTTPException(400, f"Website intake failed: {e}")
 
@@ -198,8 +203,10 @@ def plan(req: PlanRequest):
             cid, path.name, str(path), meta["duration"], meta["width"],
             meta["height"], meta["fps"], analysis
         ))
-    direction = req.creative_direction or creative_direction({}, req.prompt)
-    result = build_plan(clips, req.prompt, req.duration, direction)
+    naha_context = compile_context(req.command, req.prompt, req.creative_brief)
+    direction = req.creative_direction or creative_direction(req.creative_brief or {}, req.prompt, naha_context)
+    result = build_plan(clips, req.prompt, req.duration, direction, naha_context)
+    result["naha_context"] = naha_context
     result["storyboard"] = build_storyboard(result)
     result = add_transcript_captions(result)
     music_path = _find_media(req.music_id) if req.music_id else None
