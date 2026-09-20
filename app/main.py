@@ -78,7 +78,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.17.0",
+        "version": "0.20.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
@@ -327,6 +327,15 @@ def download_pack_base(rid: str):
     path = MEDIA / f"nahavideo_pack_base_{rid}.mp4"
     if not path.exists():
         raise HTTPException(404, "Base render not found")
+    return FileResponse(path, media_type="video/mp4", filename=path.name)
+
+
+@app.get("/api/render-pack/{rid}/{platform}")
+def download_pack_platform(rid: str, platform: str):
+    key = normalize_platforms([platform])[0]
+    path = MEDIA / f"delivery_{rid}" / f"nahavideo_pack_base_{rid}_{key}.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Platform render not found")
     return FileResponse(path, media_type="video/mp4", filename=path.name)
 
 
