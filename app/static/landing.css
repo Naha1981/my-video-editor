@@ -60,3 +60,14 @@ h1 em{font-style:normal;color:#fff;text-shadow:0 0 50px rgba(224,115,61,.18)}
 @media(max-width:1000px){.navlinks{display:none}.hero{align-items:end}.videoWall{left:48%;width:90vw;opacity:.8}.centerFrame{width:min(320px,36vw)}.directorBody{grid-template-columns:1fr}.demoSide{border-left:0;border-top:1px solid rgba(255,255,255,.09);display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.decisionRow{border:0}.rail{padding-bottom:75px}}
 @media(max-width:700px){.nav{height:64px;padding:0 18px}.status{display:none}.hero{padding:105px 6vw 55px;min-height:92vh}.heroContent{max-width:100%}.lead{font-size:16px}.heroVisual{inset:72px 0 0}.videoWall{left:52%;top:2%;width:128vw;transform:translateX(-8%) perspective(800px) rotateY(-10deg) rotateX(2deg);opacity:.62}.centerFrame{width:48vw;min-width:220px;top:15%}.heroGlow{height:70%}.rail{padding:0 6vw 70px}.card{flex-basis:220px}.section{padding:85px 6vw}.directorPanel{margin-top:22px}.demoScreen{min-height:330px}.demoSide{grid-template-columns:1fr 1fr}.footer{padding:25px 6vw;gap:10px;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.revealCard{opacity:0;transform:translateY(24px);}.revealCard.isVisible{opacity:1;transform:none}.revealCard.active{outline:1px solid rgba(224,115,61,.65);box-shadow:0 0 0 1px rgba(224,115,61,.25),0 25px 65px rgba(0,0,0,.35)}
+.centerVideo{transition:background .65s ease,filter .65s ease,transform .65s ease}
+.centerVideo.sceneRhythm{background:linear-gradient(90deg,#a24f2f 0 22%,#5c7480 23% 45%,#80654e 46% 65%,#334650 66%)}
+.centerVideo.sceneCaption{background:radial-gradient(circle at 50% 45%,#ecdbbe 0 9%,transparent 10%),linear-gradient(145deg,#26333a,#8c4b31 50%,#12181c)}
+.centerVideo.sceneReframe{background:linear-gradient(160deg,#20343b 0 40%,#bc815b 41% 60%,#2a3134 61%)}
+.centerVideo.sceneEvidence{background:linear-gradient(135deg,#17232a,#3b5c65 42%,#b97e56 43% 58%,#192127 59%)}
+.centerVideo.sceneDelivery{background:linear-gradient(135deg,#191d21,#7e5d49 50%,#d7c5ab)}
+.revealCard{transition:opacity .6s ease,transform .6s ease,box-shadow .35s ease,outline-color .35s ease}
+.demoPlay{color:white;border:1px solid rgba(255,255,255,.28);cursor:pointer}
+@media(prefers-reduced-motion:reduce){.revealCard{opacity:1;transform:none}.centerVideo{transition:none}}
