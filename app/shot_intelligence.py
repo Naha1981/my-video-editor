@@ -18,6 +18,7 @@ def classify_shot(analysis: dict[str, Any] | None) -> dict[str, Any]:
     analysis = analysis or {}
     labels = analysis.get("semantic", {}).get("labels", {}) or {}
     visual = analysis.get("visual", {}) or {}
+    stock = analysis.get("stock", {}) or {}
     tags: list[str] = []
     if labels:
         for name, value in sorted(labels.items(), key=lambda x: float(x[1] or 0), reverse=True):
@@ -29,11 +30,20 @@ def classify_shot(analysis: dict[str, Any] | None) -> dict[str, Any]:
         tags.append("wide")
     if analysis.get("hero_time") is not None:
         tags.append("hero_candidate")
-    return {"tags": list(dict.fromkeys(tags)), "confidence": round(min(1.0, max([float(v or 0) for v in labels.values()] or [0.0])), 3)}
+    if stock.get("approved"):
+        tags.append("approved_stock")
+    return {
+        "tags": list(dict.fromkeys(tags)),
+        "confidence": round(min(1.0, max([float(v or 0) for v in labels.values()] or [0.0])), 3),
+    }
 
 
 def intent_fit(analysis: dict[str, Any] | None, intent: str) -> float:
     analysis = analysis or {}
+    stock = analysis.get("stock", {}) or {}
+    if stock.get("approved") and str(stock.get("intent", "")) == str(intent):
+        return 1.0
+
     labels = analysis.get("semantic", {}).get("labels", {}) or {}
     wanted = INTENT_LABELS.get(intent, [intent])
     overall = max((float(labels.get(label, 0) or 0) for label in wanted), default=0.0)
