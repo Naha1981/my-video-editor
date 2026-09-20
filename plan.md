@@ -248,3 +248,10 @@ NahaVideo Web Service
 - Records plan/version, creative direction, NahaLabs context, timeline, source assets, stock provenance, music/logo references, footage gaps and Final QA state.
 - Source video files receive SHA-256 checksums so the delivered edit can be traced back to exact media bytes.
 - Added /api/delivery-manifest and UI access from Final QA.
+
+
+## v0.28 — Multi-format Variants
+- Added deterministic approved-plan rendering into 9:16, 1:1 and 16:9 outputs.
+- Variants are generated from the same sanitized Director timeline rather than independently inventing edits.
+- Variant rendering is gated by the Final QA checks.
+- Added downloadable variant routes and a one-click UI action.
