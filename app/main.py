@@ -27,7 +27,7 @@ from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
 from .services.asset_fetcher import collect_public_assets
 from .services.stock_scout import scout_missing_stock
-from .integrations.cobalt import configured as cobalt_configured, request_media, normalize_candidates, CobaltError
+from .integrations.cobalt import configured as cobalt_configured, request_media, normalize_candidates, candidate_download_allowed, CobaltError
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -168,6 +168,63 @@ def asset_scout(req: AssetScoutRequest):
         return result
     except Exception as exc:
         raise HTTPException(400, f"Asset scout failed: {type(exc).__name__}: {exc}")
+
+
+@app.post("/api/cobalt/ingest")
+def cobalt_ingest(req: CobaltImportRequest):
+    if not req.authorized:
+        raise HTTPException(400, "Confirm you are authorized to download and reuse this media")
+    if not cobalt_configured():
+        raise HTTPException(400, "Cobalt is not configured")
+    try:
+        response = request_media(req.url, video_quality=req.video_quality)
+        candidates = normalize_candidates(req.url, response)
+        imported = []
+        for candidate in candidates[:6]:
+            media_url = str(candidate.get("url") or "")
+            if not media_url or not candidate_download_allowed(media_url):
+                continue
+            try:
+                import urllib.request as _ur
+                from urllib.parse import urlparse as _urlparse
+                suffix = Path(_urlparse(media_url).path).suffix.lower()
+                if suffix not in {".mp4", ".webm", ".mov", ".m4v"}:
+                    suffix = ".mp4"
+                sid = uuid4().hex[:12]
+                path = MEDIA / f"{sid}{suffix}"
+                request = _ur.Request(media_url, headers={"User-Agent": "NahaVideo/0.25 (+cobalt-import)"})
+                with _ur.urlopen(request, timeout=30) as stream, path.open("wb") as out:
+                    total = 0
+                    while True:
+                        chunk = stream.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > 80 * 1024 * 1024:
+                            raise ValueError("Cobalt media exceeds the 80 MB import limit")
+                        out.write(chunk)
+                meta = ffprobe(path)
+                provenance = register_stock_asset(
+                    path,
+                    beat="imported",
+                    intent="result",
+                    provider="cobalt",
+                    source_url=req.url,
+                    license_name="operator-confirmed",
+                    attribution="",
+                    approved=False,
+                )
+                analysis = enrich_analysis_with_stock(analyze_media(path), path)
+                imported.append(stock_public(sid, candidate.get("filename") or path.name, path, meta, analysis))
+            except Exception:
+                try:
+                    path.unlink(missing_ok=True)
+                    path.with_suffix(path.suffix + ".stock.json").unlink(missing_ok=True)
+                except Exception:
+                    pass
+        return {"status": "imported" if imported else "no_importable_media", "source_url": req.url, "assets": imported}
+    except CobaltError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post("/api/cobalt/import")
