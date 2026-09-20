@@ -19,12 +19,13 @@ from .pacing import align_cut_boundaries
 from .motion import render_brand_card
 from .stock_search import build_stock_manifest
 from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stock_public
+from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.17.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.18.0")
 
 
 class PlanRequest(BaseModel):
@@ -44,6 +45,7 @@ class RenderRequest(BaseModel):
     music_id: str | None = None
     logo_id: str | None = None
     captions: bool = True
+    platform: str = "reels"
 
 
 class BriefRequest(BaseModel):
@@ -74,6 +76,7 @@ def health():
         "version": "0.17.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
+        "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
     }
 
 
@@ -260,7 +263,13 @@ def render_video(req: RenderRequest):
         render(MEDIA, clean_plan, clips, output, music, logo, captions=req.captions)
     except Exception as e:
         raise HTTPException(500, str(e))
-    return {"id": rid, "download": f"/api/render/{rid}", "plan": clean_plan}
+    delivery_qc = verify_output(output, req.platform)
+    return {
+        "id": rid,
+        "download": f"/api/render/{rid}",
+        "plan": clean_plan,
+        "delivery_qc": delivery_qc,
+    }
 
 
 @app.get("/api/render/{rid}")
