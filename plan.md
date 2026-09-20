@@ -294,3 +294,9 @@ NahaVideo Web Service
 - Added normal/emphasis/hero caption styles based on message importance.
 - Short commercial statements with emphasis receive stronger but restrained typography.
 - Longer captions receive a smaller emphasis treatment; ordinary dialogue remains unchanged.
+
+
+## v0.35 — AI Director Caption Rhythm
+- Caption metadata now considers creative intent, caption hierarchy, duration and nearby music beats.
+- Hero/CTA statements receive accent rhythm; captions near musical beats can align visually; very short captions are marked quick.
+- Rhythm decisions remain deterministic and explainable; spoken content is never rewritten.
