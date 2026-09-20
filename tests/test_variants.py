@@ -13,3 +13,10 @@ def test_render_variants_ignores_unknown_formats(tmp_path):
     out = render_variants(source, tmp_path / "out", ["9:16", "bogus"])
     assert len(out["results"]) == 1
     assert out["results"][0]["aspect"] == "9:16"
+
+
+def test_crop_filter_contains_focal_bias():
+    from app.focal import crop_filter
+    out = crop_filter(1080, 1920, {"x": 0.72, "y": 0.38})
+    assert "0.7200" in out
+    assert "0.3800" in out
