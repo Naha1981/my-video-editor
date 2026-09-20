@@ -139,6 +139,9 @@ def _extract_mono_wav(path: Path, seconds: float | None = None) -> Path:
 
 
 def detect_active_audio(path: Path, sample_rate: int = 16000, hop_seconds: float = .20) -> dict[str, Any]:
+    import os
+    if os.getenv("NAHAVIDEO_ENABLE_AUDIO_INTELLIGENCE", "1").lower() in {"0", "false", "no", "off"}:
+        return {"available": False, "active_ranges": [], "silence_ratio": 0.0, "reason": "audio intelligence disabled"}
     try:
         import librosa
     except Exception:
