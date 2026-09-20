@@ -102,7 +102,9 @@ def cobalt_host() -> str:
 def candidate_download_allowed(url: str) -> bool:
     """Only permit candidate downloads from the configured Cobalt host or explicit allowlist."""
     from urllib.parse import urlparse
-    host = (urlparse(url).hostname or "").lower().rstrip(".")
+    from ..security import validate_public_url
+    safe = validate_public_url(url, label="Cobalt media URL")
+    host = (urlparse(safe).hostname or "").lower().rstrip(".")
     if not host:
         return False
     configured_hosts = {
