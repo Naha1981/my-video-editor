@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NahaVideo AI Director</title>
+<style>
+:root{--bg:#0b0d0f;--panel:#12161a;--line:#252b31;--text:#f3f4f6;--muted:#9ca3af;--accent:#d9ff4f;--danger:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,sans-serif}
+main{max-width:1220px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:end;margin-bottom:22px}
+.brand{font-weight:800;font-size:22px}.tag{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}.wide{grid-column:1/-1}
+textarea,input{width:100%;background:#0d1115;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px;font:inherit}
+textarea{min-height:130px;resize:vertical}button{background:var(--accent);color:#101300;border:0;border-radius:9px;padding:9px 13px;font-weight:800;cursor:pointer;margin-top:10px}
+button.secondary{background:#242b31;color:var(--text);border:1px solid #39434c}button.danger{background:#3b2020;color:#ffb4b4}
+button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{padding:11px;border:1px solid var(--line);border-radius:9px}
+.clipTop{display:flex;justify-content:space-between;gap:12px}.badge{font-size:11px;border:1px solid #3b4650;padding:2px 7px;border-radius:999px;color:var(--muted)}
+.badge.ai{border-color:#657d1b;color:var(--accent)}.muted,.status{color:var(--muted)}.rank{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.score{font-weight:800;color:var(--accent);min-width:45px}.metric{font-size:12px;color:var(--muted)}
+.timeline{display:grid;gap:8px}.seg{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#252c33;border-radius:10px;padding:10px}
+.seg.off{opacity:.45}.logo{background:#353d46}.controls{display:flex;gap:5px;flex-wrap:wrap}.controls button{margin-top:0;padding:6px 9px;font-size:12px}
+.pills{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 7px;color:var(--muted)}
+.success{color:var(--accent)}.dangerText{color:var(--danger)}a{color:var(--accent)}
+.quick{background:linear-gradient(180deg,#151a1f,#12161a);border:1px solid #39434c}
+.quick h1{font-size:34px;line-height:1.1;margin:0 0 8px}.quick .sub{color:var(--muted);font-size:16px;margin-bottom:18px}
+.quickGrid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}.field{display:grid;gap:6px}.field label{font-size:12px;color:var(--muted)}
+.primaryAction{width:100%;font-size:17px;padding:14px 18px;margin-top:4px}
+.autoStatus{padding:10px 12px;border-radius:10px;background:#0d1115;border:1px solid var(--line);min-height:22px}
+.autoStatus.ok{border-color:#657d1b}.autoStatus.warn{border-color:#795f22}
+.advancedToggle{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0 10px}
+.advancedWrap{display:none}.advancedWrap.show{display:block}
+.resultBox{font-size:15px;line-height:1.7}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.seg{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}.quick h1{font-size:28px}}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
+  <div class="muted">v0.37</div>
+</div>
+
+<section class="panel wide quick">
+  <h1>Create your video</h1>
+  <div class="sub">Upload the footage and tell NahaVideo what the video should achieve. The Director handles the research, edit plan, missing B-roll and rendering for you.</div>
+  <div class="quickGrid">
+    <div class="field">
+      <label>YOUR FOOTAGE</label>
+      <input id="quickFiles" type="file" accept="video/*" multiple>
+    </div>
+    <div class="field">
+      <label>CLIENT WEBSITE (optional)</label>
+      <input id="quickWebsite" placeholder="https://client.co.za">
+    </div>
+    <div class="field">
+      <label>WHAT SHOULD THIS VIDEO ACHIEVE?</label>
+      <textarea id="quickGoal" style="min-height:110px">Create a 30-second premium advertisement. Start with the strongest shot, remove dead time, keep the pacing energetic, show the experience and finish with the brand call-to-action.</textarea>
+    </div>
+    <div class="field">
+      <label>FORMAT</label>
+      <select id="quickFormat">
+        <option value="reels">Instagram Reels</option>
+        <option value="tiktok">TikTok</option>
+        <option value="shorts">YouTube Shorts</option>
+        <option value="vertical_pack">Reels + TikTok + Shorts</option>
+        <option value="youtube">YouTube</option>
+        <option value="social_pack">Reels + TikTok + Shorts + Facebook</option>
+      </select>
+      <label style="margin-top:4px">MUSIC (optional)</label>
+      <input id="quickMusic" type="file" accept="audio/*">
+      <label style="margin-top:4px">LOGO (optional)</label>
+      <input id="quickLogo" type="file" accept="image/png,image/jpeg,image/webp">
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <button class="primaryAction" id="createVideoBtn" onclick="createVideo()">Create video</button>
+  </div>
+  <div id="autoStatus" class="autoStatus" style="margin-top:12px">Ready. NahaVideo will handle the production steps automatically.</div>
+  <div id="autoResult" class="resultBox" style="margin-top:10px"></div>
+</section>
+
+<div class="advancedToggle">
+  <div><b>Advanced Director controls</b><div class="metric">Optional. Use these when you want to inspect or manually edit the production.</div></div>
+  <button class="secondary" onclick="toggleAdvanced()" id="advancedBtn">Show advanced controls</button>
+</div>
+<div id="advancedWrap" class="advancedWrap">
+<div class="grid">
+<section class="panel">
+  <h2>1. Footage</h2>
+  <input id="files" type="file" accept="video/*" multiple>
+  <button onclick="upload()">Analyse footage</button>
+  <div id="clips" class="clips"></div>
+</section>
+
+<section class="panel">
+  <h2>2. Creative brief</h2>
+  <textarea id="prompt">Create a 30-second premium restaurant advertisement. Start with the strongest food shot, remove dead time, keep the pacing energetic, lower the music under dialogue, and finish with the NahaLabs logo.</textarea>
+  <div class="metric">NahaLabs command (optional)</div><input id="command" value="/lead-gen /reel /nahalabs-authentic" placeholder="/cargoiq /lead-gen /facebook-ad /nahalabs-authentic">
+  <div id="nahaContext" class="pills"></div>
+  <div class="metric">Client website URL (optional)</div><input id="siteUrl" placeholder="https://client.co.za"><button class="secondary" onclick="loadBrief()">Understand website</button><div class="metric" style="margin-top:8px">Browser task for NahaLabs Asset Scout (optional)</div><input id="browserTask" placeholder="Collect logo, hero images, menu/services, phone, WhatsApp, booking/order links, and useful brand pages"><button class="secondary" onclick="scoutAssets()">Run NahaLabs Asset Scout</button><div id="assetScoutStatus" class="status"></div><div id="assetScoutResults" class="clips"></div><div id="briefStatus" class="status"></div><div id="concepts" class="pills"></div><div id="briefSummary" class="metric"></div><div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
+  <div class="metric" style="margin-top:10px">Optional NahaLabs logo</div><input id="logo" type="file" accept="image/png,image/jpeg,image/webp">
+  <button id="planBtn" onclick="makePlan()" disabled>Build AI edit plan</button>
+  <div id="status" class="status"></div>
+</section>
+
+<section class="panel wide">
+  <h2>3. Director decision</h2>
+  <div id="ranked" class="muted">Upload footage to begin.</div>
+</section>
+
+<section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div>
+  <div class="metric" id="operatingLoop"></div></section>
+
+<section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><button class="secondary" onclick="scoutMissingStock()">Find missing stock/B-roll automatically</button><div id="stockScoutStatus" class="status"></div><div id="gaps" class="clips"></div></section>
+
+<section class="panel wide">
+  <h2>6. Attach stock footage</h2>
+  <div class="metric">NahaLabs can now search stock providers and collect public video candidates automatically. Assets remain pending until provenance/license is approved; approved stock can fill the matching creative intent.</div>
+  <div class="grid" style="margin-top:10px">
+    <input id="stockFile" type="file" accept="video/*">
+    <select id="stockIntent"><option value="cta">CTA</option><option value="hero_food">Hero food</option><option value="craft">Craft</option><option value="experience">Experience</option><option value="proof">Proof</option><option value="problem">Problem</option><option value="result">Result</option></select>
+    <input id="stockProvider" placeholder="Provider e.g. Pexels">
+    <input id="stockUrl" placeholder="Source URL">
+    <input id="stockLicense" placeholder="License e.g. Pexels">
+    <input id="stockAttribution" placeholder="Attribution / creator">
+  </div>
+  <label class="metric" style="display:block;margin-top:8px"><input id="stockApproved" type="checkbox" style="width:auto"> I have checked the source/license and approve this asset for the edit.</label>
+  <button class="secondary" onclick="uploadStock()">Attach stock clip</button>
+  <div id="stockStatus" class="status"></div>
+  <div id="stockAssets" class="clips"></div>
+</section>
+
+<section class="panel wide">
+  <h2>6.5 Import media from URL</h2>
+  <div class="metric">Optional Cobalt adapter. Use only media you are authorized to download and reuse. NahaVideo uses a self-hosted Cobalt instance when configured; it does not silently use a public downloader.</div>
+  <div class="grid" style="margin-top:10px">
+    <input id="cobaltUrl" placeholder="Paste an Instagram / TikTok / YouTube / other supported URL">
+    <select id="cobaltQuality"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="max">Maximum</option></select>
+  </div>
+  <label class="metric" style="display:block;margin-top:8px"><input id="cobaltAuthorized" type="checkbox" style="width:auto"> I am authorized to download and reuse this media.</label>
+  <button class="secondary" onclick="importWithCobalt()">Import Media</button>
+  <div id="cobaltStatus" class="status"></div>
+  <div id="cobaltCandidates" class="clips"></div>
+</section>
+
+<section class="panel wide">
+  <h2>7. Editable timeline</h2>
+  <div id="timeline" class="timeline"></div>
+  <div class="metric">Delivery pack</div>
+  <div class="pills">
+    <label class="pill"><input class="platformBox" type="checkbox" value="reels" checked> Reels</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="tiktok"> TikTok</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="shorts"> Shorts</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="youtube"> YouTube</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="linkedin"> LinkedIn</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="facebook"> Facebook</label>
+  </div>
+  <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4</button>
+  <button id="finalizeBtn" class="secondary" onclick="finalizeApprovedStock()" style="display:none">Rebuild & Finalize with Approved Stock</button>
+  <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button> <button id="variantsBtn" class="secondary" onclick="renderVariants()" disabled>Render 9:16 + 1:1 + 16:9</button>
+  <div id="result" class="status"></div>
+</section>
+<section class="panel wide">
+  <h2>8. Final QA</h2>
+  <div class="metric">NahaVideo checks the production before final delivery: required coverage, source files, stock approval, provenance and timeline duration.</div>
+  <button class="secondary" onclick="runFinalQA()">Run Final QA</button> <button class="secondary" onclick="loadDeliveryManifest()">Build Delivery Manifest</button>
+  <div id="finalQaStatus" class="status"></div>
+  <div id="finalQaChecks" class="clips"></div>
+</section>
+
+</div>
+</div>
+</main>
+
+<script>
+let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null,quickMusicFile=null,quickLogoFile=null;
+
+function toggleAdvanced(){
+  const wrap=$('advancedWrap'),btn=$('advancedBtn');
+  wrap.classList.toggle('show');
+  btn.textContent=wrap.classList.contains('show')?'Hide advanced controls':'Show advanced controls';
+}
+
+function setQuickStatus(message, type=''){
+  $('autoStatus').className='autoStatus'+(type?' '+type:'');
+  $('autoStatus').textContent=message;
+}
+
+function selectedQuickPlatforms(){
+  const value=$('quickFormat').value;
+  const map={
+    reels:['reels'],
+    tiktok:['tiktok'],
+    shorts:['shorts'],
+    vertical_pack:['reels','tiktok','shorts'],
+    youtube:['youtube'],
+    social_pack:['reels','tiktok','shorts','facebook']
+  };
+  return map[value]||['reels'];
+}
+
+function applyQuickPlatforms(){
+  const wanted=new Set(selectedQuickPlatforms());
+  document.querySelectorAll('.platformBox').forEach(box=>box.checked=wanted.has(box.value));
+}
+
+async function createVideo(){
+  const files=[...$('quickFiles').files];
+  const website=$('quickWebsite').value.trim();
+  const goal=$('quickGoal').value.trim();
+  if(!files.length){setQuickStatus('Add at least one video clip to begin.','warn');return;}
+
+  $('createVideoBtn').disabled=true;
+  $('autoResult').innerHTML='';
+  clips=[];stockAssets=[];plan=null;musicId=null;logoId=null;
+  quickMusicFile=$('quickMusic').files[0]||null;
+  quickLogoFile=$('quickLogo').files[0]||null;
+  $('files').value='';
+  $('siteUrl').value=website;
+  $('prompt').value=goal;
+  applyQuickPlatforms();
+
+  try{
+    setQuickStatus('1/4 — Analysing your footage…');
+    await uploadFiles(files);
+
+    if(website){
+      setQuickStatus('2/4 — Understanding the client and finding useful brand assets…');
+      await loadBrief(true);
+    }else{
+      setQuickStatus('2/4 — Preparing the creative direction…');
+    }
+
+    setQuickStatus('3/4 — Director is building the story and checking for missing footage…');
+    await makePlan();
+
+    let stockData=null;
+    if(plan?.footage_gaps?.gap_count && JevStatusEnabled()){
+      setQuickStatus('3/4 — Finding missing B-roll automatically…');
+      stockData=await scoutMissingStock(true);
+    }
+
+    setQuickStatus('4/4 — Rendering your finished video…');
+    await renderPack(true);
+
+    const pending=stockAssets.filter(x=>!x.approved).length;
+    if(pending){
+      setQuickStatus('Draft ready. NahaVideo also found '+pending+' stock suggestion(s) that need a quick approval before they can be added.', 'warn');
+      $('autoResult').innerHTML='<span class="success">Your first draft is ready.</span> '+($('result').innerHTML||'')+
+        '<br><button class="secondary" onclick="showStockReview()">Review suggested footage</button>';
+    }else{
+      setQuickStatus('Done — your video is ready.','ok');
+      $('autoResult').innerHTML=$('result').innerHTML||'<span class="success">Video ready.</span>';
+    }
+  }catch(err){
+    setQuickStatus('Something stopped the automatic flow: '+(err?.message||err),'warn');
+  }finally{
+    $('createVideoBtn').disabled=false;
+    quickMusicFile=null;quickLogoFile=null;
+  }
+}
+
+async function JevStatusEnabled(){
+  if(typeof window.NAHAVIDEO_JEV_ENABLED==='boolean') return window.NAHAVIDEO_JEV_ENABLED;
+  try{
+    const r=await fetch('/api/health');
+    const d=await r.json();
+    window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled);
+  }catch(e){window.NAHAVIDEO_JEV_ENABLED=false;}
+  return window.NAHAVIDEO_JEV_ENABLED;
+}
+
+function showStockReview(){
+  toggleAdvanced();
+  setTimeout(()=>document.querySelector('#stockAssets')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+}
+
+const $=id=>document.getElementById(id);
+const fmt=s=>Number(s).toFixed(1)+'s';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderClipList(){
+  $('clips').innerHTML=clips.map(c=>{
+    const a=c.analysis||{},sem=a.semantic||{},tr=a.transcript||{},stock=a.kind==='stock';
+    const ai=sem.available?'vision AI ON':'vision heuristics';
+    const whisper=tr.available?'Whisper ON':'speech adapter '+(tr.reason||'off');
+    return '<div class="clip"><div class="clipTop"><b>'+esc(c.filename)+'</b><span class="badge '+(stock?'ai':sem.available?'ai':'')+'">'+esc(stock?'APPROVED STOCK':'')+(stock?' · '+esc(c.intent||''):' '+esc(ai))+'</span></div>'+
+      '<div class="muted">'+fmt(c.duration)+' · '+c.width+'×'+c.height+(stock?' · '+esc(c.provider||'stock'):' · '+(a.scenes||1)+' scenes · '+((a.audio?.silence_ratio*100)||0).toFixed(0)+'% audio silence')+'</div>'+
+      '<div class="pills"><span class="pill">'+esc(stock?(c.provenance_status||'pending'):whisper)+'</span><span class="pill">'+(stock?esc(c.license_name||'license not stated'):'visual '+Math.round(a.visual_score||50)+'/100')+'</span>'+
+      (!stock?((sem.top_labels||[]).slice(0,2).map(x=>'<span class="pill">'+esc(x.label)+' '+Math.round(x.confidence*100)+'%</span>').join('')):'')+'</div></div>'
+  }).join('');
+}
+async function uploadFiles(fs){
+  const files=[...fs];if(!files.length)return;
+  $('status').textContent='Uploading, analysing frames/audio and checking local AI adapters…';
+  const fd=new FormData();files.forEach(f=>fd.append('files',f));
+  const r=await fetch('/api/upload',{method:'POST',body:fd});const data=await r.json();
+  if(!r.ok)throw new Error(data.detail||JSON.stringify(data));
+  clips=data.filter(x=>x.kind!=='stock'); renderClipList();
+  $('planBtn').disabled=false;$('status').textContent=clips.length+' clip(s) ready.';
+}
+
+async function upload(){
+  try{ await uploadFiles([...$('files').files]); }
+  catch(err){ $('status').textContent=err.message||String(err); }
+}
+async function uploadStock(){
+  const file=$('stockFile').files[0]; if(!file)return;
+  $('stockStatus').textContent='Attaching stock and analysing it…';
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('intent',$('stockIntent').value);
+  fd.append('beat',$('stockIntent').value);
+  fd.append('provider',$('stockProvider').value);
+  fd.append('source_url',$('stockUrl').value);
+  fd.append('license_name',$('stockLicense').value);
+  fd.append('attribution',$('stockAttribution').value);
+  fd.append('approved',$('stockApproved').checked?'true':'false');
+  const r=await fetch('/api/upload-stock',{method:'POST',body:fd});const data=await r.json();
+  if(!r.ok){$('stockStatus').textContent=data.detail||JSON.stringify(data);return}
+  stockAssets.push(data);clips.push(data);renderClipList();renderStockAssets();
+  $('planBtn').disabled=false;
+  $('stockStatus').textContent=(data.approved?'Approved':'Pending')+' stock attached. Rebuild the AI edit plan to use it.';
+}
+async function approveCollectedAsset(id){
+  const r=await fetch('/api/assets/'+encodeURIComponent(id)+'/approve',{method:'POST'});
+  const data=await r.json();
+  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Approval failed';return}
+  const item=stockAssets.find(x=>x.id===id);
+  if(item){item.approved=true;item.provenance_status=data.provenance_status||'approved_by_operator';}
+  renderStockAssets();
+  $('stockScoutStatus').textContent='Asset approved for the edit. Rebuild the AI edit plan to include it.';
+  $('finalizeBtn').style.display='inline-block';
+}
+
+function renderStockAssets(){
+  $('stockAssets').innerHTML=stockAssets.map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge '+(x.approved?'ai':'')+'">'+esc(x.provenance_status||'pending')+'</span></div><div class="muted">'+esc(x.intent)+' · '+esc(x.provider||'provider not stated')+' · '+esc(x.license_name||'license not stated')+'</div><div class="metric"><a href="/api/assets/'+encodeURIComponent(x.id)+'" target="_blank" rel="noreferrer">Preview asset</a>'+(x.approved?'':' · <button class="secondary" onclick="approveCollectedAsset(''+esc(x.id)+'')">Approve for edit</button>')+'</div></div>').join('');
+}
+
+async function scoutAssets(){
+  const url=$('siteUrl').value.trim(); if(!url)return;
+  $('assetScoutStatus').textContent='NahaLabs is compiling the browser mission and scouting the site…';
+  const r=await fetch('/api/asset-scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,task:$('browserTask').value})});
+  const data=await r.json();
+  if(!r.ok){$('assetScoutStatus').textContent=data.detail||'Asset scout failed';return}
+  if(data.status==='disabled'){
+    $('assetScoutStatus').textContent=data.message||'Asset Scout is disabled.';
+    return;
+  }
+  const obs=data.observations?.length||0, assets=data.assets?.length||0;
+  $('assetScoutStatus').textContent='Asset Scout: '+esc(data.status||'completed')+' · '+obs+' observation(s) · '+assets+' asset/link candidate(s).';
+  $('assetScoutResults').innerHTML=(data.assets||[]).slice(0,30).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.kind||'asset')+'</b></div><div class="muted">'+esc(x.url||'')+'</div></div>').join('');
+  if(data.collected_assets?.length) $('assetScoutStatus').textContent += ' · '+data.collected_assets.filter(x=>x.status==='collected').length+' collected';
+  if(data.errors?.length) $('assetScoutStatus').textContent += ' · '+esc(data.errors[0]);
+}
+
+async function loadBrief(automatic=false){
+  const url=$('siteUrl').value.trim(); if(!url)return;
+  $('briefStatus').textContent='Reading website metadata and visible text locally…';
+  const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value,command:$('command').value})});
+  const data=await r.json(); if(!r.ok){const message=data.detail||'Website intake failed';$('briefStatus').textContent=message;if(automatic)throw new Error(message);return}
+  const b=data.creative_brief;
+  creativeBrief=b;
+  creativeDirection=b.direction||null;
+  renderConcepts();
+  $('briefSummary').textContent=b.business_name+' · '+b.category+' · CTA: '+b.cta+' · '+b.tone;
+  if(b.asset_scout){ const s=b.asset_scout; $('assetScoutStatus').textContent='Automatic Asset Scout: '+(s.status||'ready')+' · '+((s.assets||[]).length)+' asset/link candidate(s).'; $('assetScoutResults').innerHTML=(s.assets||[]).slice(0,30).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.kind||'asset')+'</b></div><div class="muted">'+esc(x.url||'')+'</div></div>').join(''); }
+  $('prompt').value='Create a '+b.tone+' '+b.category+' advertisement. Offer: '+b.offer+'. Audience: '+b.audience+'. CTA: '+b.cta+'. Use '+b.visual_keywords.join(', ')+'. Remove dead time, keep the pacing engaging, and finish with the brand.';
+  $('briefStatus').textContent='Brand brief ready. Director prompt updated.';
+}
+
+function renderConcepts(){
+  const list=creativeDirection?.options||[];
+  $('concepts').innerHTML=list.map((x,i)=>'<button class="secondary" style="margin-top:4px" onclick="chooseConcept('+i+')">'+esc(x.name)+'</button>').join('');
+}
+function chooseConcept(i){
+  if(!creativeDirection?.options?.[i])return;
+  creativeDirection.selected=creativeDirection.options[i];
+  $('briefStatus').textContent='Creative direction selected: '+creativeDirection.selected.name;
+}
+
+async function uploadMusic(){
+  const file=quickMusicFile||$('music').files[0];if(!file)return null;
+  const fd=new FormData();fd.append('file',file);const r=await fetch('/api/upload-music',{method:'POST',body:fd});const data=await r.json();
+  if(!r.ok){$('status').textContent=data.detail||'Music upload failed';return null}return data.id;
+}
+async function uploadLogo(){
+  const file=quickLogoFile||$('logo').files[0];if(!file)return null;
+  const fd=new FormData();fd.append('file',file);const r=await fetch('/api/upload-logo',{method:'POST',body:fd});const data=await r.json();
+  if(!r.ok){$('status').textContent=data.detail||'Logo upload failed';return null}return data.id;
+}
+
+async function importWithCobalt(){
+  const url=$('cobaltUrl').value.trim();
+  if(!url){$('cobaltStatus').textContent='Paste a media URL first.';return;}
+  if(!$('cobaltAuthorized').checked){$('cobaltStatus').textContent='Confirm you are authorized to download and reuse this media.';return;}
+  $('cobaltStatus').textContent='Asking the configured Cobalt instance for media…';
+  const r=await fetch('/api/cobalt/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,authorized:true,video_quality:$('cobaltQuality').value})});
+  const data=await r.json();
+  if(!r.ok){$('cobaltStatus').textContent=data.detail||'Cobalt import failed';return;}
+  if(data.status==='disabled'){$('cobaltStatus').textContent=data.message;return;}
+  $('cobaltCandidates').innerHTML=(data.candidates||[]).map((x,i)=>
+    '<div class="clip"><div class="clipTop"><b>'+esc(x.filename||('Media '+(i+1)))+'</b><span class="badge">COBALT</span></div>'+
+    '<div class="metric">Source: '+esc(data.source_url||'')+'</div>'+
+    '<a href="'+esc(x.url)+'" target="_blank" rel="noreferrer">Open candidate</a></div>'
+  ).join('') || '<div class="muted">Cobalt returned no importable media.</div>';
+  $('cobaltStatus').textContent='Media candidates returned. Importing them keeps them pending until you approve provenance.';
+  const ingest=await fetch('/api/cobalt/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,authorized:true,video_quality:$('cobaltQuality').value})});
+  const imported=await ingest.json();
+  if(ingest.ok && imported.assets?.length){
+    for(const x of imported.assets){
+      if(!stockAssets.some(a=>a.id===x.id)){
+        stockAssets.push({...x,approved:false,kind:'stock',provenance_status:'pending'});
+      }
+    }
+    renderStockAssets();
+    $('cobaltStatus').textContent='Imported '+imported.assets.length+' media asset(s) into the pending Asset Library. Review provenance before use.';
+  }else if(ingest.ok){
+    $('cobaltStatus').textContent='Cobalt returned candidates, but none could be safely imported. Review the candidate URLs.';
+  }else{
+    $('cobaltStatus').textContent='Candidates found, but automatic ingestion was blocked. Review the candidate URLs.';
+  }
+}
+
+async function makePlan(automatic=false){
+  if(!clips.length)return;
+  $('status').textContent='Director is building the edit decision graph…';
+  musicId=await uploadMusic();logoId=await uploadLogo();
+  const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      prompt:$('prompt').value,command:$('command').value,duration:30,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
+      stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
+      music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
+    })});
+  plan=await r.json();if(!r.ok){const message=plan.detail||JSON.stringify(plan);$('status').textContent=message;if(automatic)throw new Error(message);return}
+  renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
+  const ctx=plan.naha_context||{};
+  $('nahaContext').innerHTML=[
+    ctx.lane_label,ctx.product_label,ctx.objective_label,ctx.format_label,
+    ctx.authenticity_profile?'NahaLabs Authenticity':null
+  ].filter(Boolean).map(x=>'<span class="pill">'+esc(x)+'</span>').join('');
+  const chosen=plan.creative_direction?.selected;
+  if(chosen) $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
+  $('renderBtn').disabled=false;$('packBtn').disabled=false;$('variantsBtn').disabled=false;
+}
+
+async function scoutMissingStock(automatic=false){
+  const gaps=plan?.footage_gaps?.gaps||[];
+  if(!gaps.length){ $('stockScoutStatus').textContent='No missing footage needs stock search.'; return {status:'not_needed',collected_assets:[],candidates:[],missions:[]}; }
+  $('stockScoutStatus').textContent='NahaLabs is searching stock providers and collecting public candidates…';
+  const r=await fetch('/api/stock-scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gaps,max_missions:6})});
+  const data=await r.json();
+  if(!r.ok){$('stockScoutStatus').textContent=data.detail||'Stock scout failed';if(automatic)return {status:'error',collected_assets:[],candidates:[],missions:[],error:data.detail};return;}
+  if(data.status==='disabled'){$('stockScoutStatus').textContent=data.message||'Jev is disabled.';if(automatic)return data;return}
+  const added=(data.collected_assets||[]).filter(x=>x.status==='collected' && x.id && /\.(mp4|webm|mov)$/i.test(x.filename||''));
+  for(const x of added){
+    if(!stockAssets.some(a=>a.id===x.id)){
+      stockAssets.push({
+        id:x.id,filename:x.filename,kind:'stock',approved:false,
+        intent:x.intent||'cta',beat:x.beat||x.intent||'cta',
+        provider:x.provider||'browser-scout',
+        source_url:x.url||'',license_name:'',attribution:'',
+        provenance_status:'pending'
+      });
+    }
+  }
+  renderStockAssets();
+  const collected=(data.collected_assets||[]).length;
+  const candidates=(data.candidates||[]).length;
+  $('stockScoutStatus').textContent='Stock scout finished · '+data.missions?.length+' provider search(s) · '+candidates+' candidate(s) · '+collected+' collected asset(s). Review/approve the collected stock before rendering.';
+  return data;
+}
+
+function renderPlan(){
+  const ctx=plan.naha_context||{};
+  $('nahaContext').innerHTML=[
+    ctx.lane_label,ctx.product_label,ctx.objective_label,ctx.format_label,
+    ctx.authenticity_profile?'NahaLabs Authenticity':null
+  ].filter(Boolean).map(x=>'<span class="pill">'+esc(x)+'</span>').join('');
+  const chosen=plan.creative_direction?.selected;
+  if(chosen){
+    $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
+    $('briefSummary').textContent=chosen.promise+' Proof: '+chosen.proof+' CTA: '+chosen.cta;
+  }
+  const gd=plan.footage_gaps;
+  if(ctx.objective_label) $('briefSummary').textContent=ctx.objective_label+(ctx.product_label?' · '+ctx.product_label:'')+(ctx.lane_label?' · '+ctx.lane_label:'');
+  if(gd){
+    $('gapsSummary').textContent=gd.gap_count
+      ? gd.gap_count+' footage gap(s) detected · '+gd.required_gap_count+' required'
+      : 'All required/supporting creative beats have suitable coverage.';
+    const jobs=plan.stock_manifest?.jobs||[];
+    $('gaps').innerHTML=(gd.gaps||[]).map(g=>{
+      const job=jobs.find(j=>j.intent===g.intent);
+      const links=(job?.providers||[]).map(p=>'<a href="'+esc(p.url)+'" target="_blank" rel="noreferrer">'+esc(p.name)+'</a>').join(' · ');
+      return '<div class="clip"><div class="clipTop"><b>'+esc(g.priority.toUpperCase())+' · '+esc(g.beat)+'</b><span class="badge">'+esc(g.status)+'</span></div><div class="muted">'+esc(g.need)+'</div><div class="metric">Search: '+esc(g.search_hint)+' · intent fit '+Math.round(g.intent_fit*100)+'%'+(links?' · '+links:'')+'</div></div>'
+    }).join('');
+  }
+  $('operatingLoop').textContent='Operating loop: '+(ctx.operating_loop||['find','understand','act','learn']).join(' → ');
+  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">intent: '+esc(b.creative_intent||'')+' · '+esc(b.purpose||'')+'</div></div>').join('');
+  $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
+    const sem=x.analysis?.semantic?.top_labels||[],tr=x.analysis?.transcript||{};
+    return '<div class="rank"><div class="score">'+x.score+'</div><div><b>'+(i+1)+'. '+esc(x.filename)+'</b>'+
+      '<div class="muted">'+x.reasons.map(esc).join(' · ')+'</div>'+
+      '<div class="pills">'+sem.map(s=>'<span class="pill">'+esc(s.label)+' '+Math.round(s.confidence*100)+'%</span>').join('')+
+      (tr.available?'<span class="pill">speech '+tr.segments.length+' segment(s)</span>':'')+'</div></div></div>'
+  }).join('');
+  renderTimeline();
+  if(plan.captions?.length) $('status').textContent += ' · '+plan.captions.length+' caption cue(s) detected';
+}
+function renderTimeline(){
+  $('timeline').innerHTML=plan.timeline.map((x,i)=>{
+    const disabled=x.enabled===false;
+    const title=x.type==='logo'?'NAHALABS END CARD':(i+1)+'. '+esc(x.filename);
+    return '<div class="seg '+(x.type==='logo'?'logo ':'')+(disabled?'off':'')+'">'+
+      '<div><b>'+title+'</b><div class="metric">'+fmt(x.duration)+(x.type==='clip'?' · source '+Number(x.source_start).toFixed(1)+'s':'')+'</div></div>'+
+      '<div class="controls">'+
+      '<button class="secondary" onclick="moveSeg('+i+',-1)">↑</button><button class="secondary" onclick="moveSeg('+i+',1)">↓</button>'+
+      '<button class="secondary" onclick="adjust('+i+',-0.5)">−0.5s</button><button class="secondary" onclick="adjust('+i+',0.5)">+0.5s</button>'+
+      '<button class="danger" onclick="toggleSeg('+i+')">'+(disabled?'Restore':'Remove')+'</button>'+
+      '</div><div class="metric">decision '+esc(x.id||String(i+1))+'</div></div>'
+  }).join('');
+}
+
+function adjust(i,delta){
+  const x=plan.timeline[i],next=Math.max(0.6,Math.min(12,Number(x.duration)+delta));
+  x.duration=Number(next.toFixed(3));
+  if(x.type==='clip')x.source_end=Number((Number(x.source_start)+x.duration).toFixed(3));
+  recomputeUnfilled();renderTimeline();
+}
+function toggleSeg(i){plan.timeline[i].enabled=plan.timeline[i].enabled===false;recomputeUnfilled();renderTimeline();}
+function moveSeg(i,dir){
+  const j=i+dir;if(j<0||j>=plan.timeline.length)return;
+  [plan.timeline[i],plan.timeline[j]]=[plan.timeline[j],plan.timeline[i]];
+  recomputeUnfilled();renderTimeline();
+}
+function recomputeUnfilled(){
+  const total=plan.timeline.filter(x=>x.enabled!==false).reduce((a,x)=>a+Number(x.duration||0),0);
+  plan.unfilled_seconds=Math.max(0,Number(plan.settings.duration)-total);
+}
+
+function selectedPlatforms(){
+  return [...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+}
+
+async function finalizeApprovedStock(){
+  const approved=stockAssets.filter(x=>x.approved).map(x=>x.id);
+  if(!approved.length){$('stockScoutStatus').textContent='No approved stock is ready.';return;}
+  $('stockScoutStatus').textContent='Rebuilding the edit with approved stock…';
+  try{
+    await makePlan(true);
+    $('stockScoutStatus').textContent='Approved stock is now part of the Director timeline. Rendering final delivery pack…';
+    await renderPack(true);
+    $('finalizeBtn').style.display='none';
+    setQuickStatus('Done — final video rebuilt with approved stock.','ok');
+  }catch(err){
+    $('stockScoutStatus').textContent='Finalize stopped: '+(err?.message||err);
+  }
+}
+
+async function loadDeliveryManifest(){
+  if(!plan){$('finalQaStatus').textContent='Build a plan first.';return null;}
+  $('finalQaStatus').textContent='Building the audit manifest…';
+  const platforms=[...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+  const r=await fetch('/api/delivery-manifest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),
+    music_id:musicId,logo_id:logoId,platforms
+  })});
+  const data=await r.json();
+  if(!r.ok){$('finalQaStatus').textContent=data.detail||'Manifest failed';return data;}
+  const sources=data.sources?.length||0;
+  $('finalQaStatus').textContent='Audit manifest ready · '+sources+' source asset(s) · SHA-256 recorded.';
+  $('finalQaChecks').innerHTML='<div class="clip"><div class="clipTop"><b>DELIVERY MANIFEST</b><span class="badge ai">'+esc(data.manifest_version||'1.0')+'</span></div><div class="metric">Plan '+esc(data.plan_version||'')+' · '+sources+' source asset(s) · '+(data.created_for_platforms||[]).map(esc).join(', ')+'</div></div>'+
+    (data.sources||[]).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge">'+esc((x.sha256||'').slice(0,12))+'…</span></div><div class="metric">Intent: '+esc(x.creative_intent||'')+(x.stock?' · '+esc(x.stock.provider||'stock')+' · approved '+Boolean(x.stock.approved):'')+'</div></div>').join('');
+  return data;
+}
+
+async function renderVariants(){
+  if(!plan){$('result').textContent='Build a plan first.';return;}
+  $('result').textContent='Running Final QA and rendering 9:16, 1:1 and 16:9 variants…';
+  const platforms=[...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+  const r=await fetch('/api/variants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),
+    music_id:musicId,logo_id:logoId,captions:true,platforms
+  })});
+  const data=await r.json();
+  if(!r.ok){$('result').textContent=(data.detail?.message)||data.detail||'Variant rendering blocked.';return;}
+  const links=(data.variants?.results||[]).filter(x=>x.output).map(x=>{
+    const slug=x.aspect.replace(':','x');
+    return '<a href="/api/variants/'+encodeURIComponent(data.id)+'/'+slug" target="_blank">'+esc(x.aspect)+'</a>';
+  }).join(' · ');
+  $('result').innerHTML='Variants complete · '+links;
+}
+async function runFinalQA(){
+  if(!plan){$('finalQaStatus').textContent='Build a plan first.';return null;}
+  $('finalQaStatus').textContent='Running production QA…';
+  const r=await fetch('/api/final-qa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),music_id:musicId,logo_id:logoId
+  })});
+  const data=await r.json();
+  if(!r.ok){$('finalQaStatus').textContent=data.detail||'Final QA failed';return data;}
+  $('finalQaStatus').textContent=data.status==='ready'?'FINAL QA PASSED — ready to render.':data.status.toUpperCase()+' — resolve blockers before final delivery.';
+  $('finalQaChecks').innerHTML=(data.checks||[]).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.id)+'</b><span class="badge '+(x.status==='pass'?'ai':'')+'">'+esc(x.status.toUpperCase())+'</span></div><div class="metric">'+esc(x.message)+'</div></div>').join('');
+  return data;
+}
+
+async function renderVideo(){
+  if(!plan)return;
+  $('result').textContent='Rendering…';
+  const r=await fetch('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      plan,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
+      music_id:musicId,logo_id:logoId,platform:(selectedPlatforms()[0]||'reels'),platforms:selectedPlatforms()
+    })});
+  const data=await r.json();if(!r.ok){const message=data.detail||JSON.stringify(data);$('result').textContent=message;if(automatic)throw new Error(message);return null}
+  const qc=data.delivery_qc||{};
+  const qct=qc.status==='verified'?' · FFmpeg Skill QA verified':qc.status==='fallback_only'?' · native FFmpeg fallback':' · QA '+esc(qc.status||'unknown');
+  $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a><span class="metric">'+qct+'</span>';
+}
+
+async function renderPack(automatic=false){
+  if(!plan)return null;
+  const platforms=selectedPlatforms();
+  if(!platforms.length){$('result').textContent='Select at least one platform.';return}
+  $('result').textContent='Rendering delivery pack…';
+  const r=await fetch('/api/render-pack',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      plan,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
+      music_id:musicId,logo_id:logoId,platforms
+    })});
+  const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
+  const pack=data.delivery_pack||{};
+  const links=(pack.results||[]).map(x=>x.output?
+    '<a href="/api/render-pack/'+data.id+'/'+encodeURIComponent(x.platform)+'">'+esc(x.label)+'</a>'
+    :'<span>'+esc(x.label)+' unavailable</span>').join(' · ');
+  $('result').innerHTML='<span class="success">Delivery pack ready.</span> '+links+' · <a href="'+data.base_download+'">Base render</a><span class="metric"> '+esc(pack.engine||'native')+'</span>';
+  if(pack.status==='fallback_only') $('result').innerHTML='<span class="success">Base render complete.</span> <a href="'+data.base_download+'">Download base</a><span class="metric"> FFmpeg Skill unavailable; native fallback retained.</span>';
+  return data;
+}
+</script>
+<script>
+(async()=>{try{const r=await fetch('/api/health');const d=await r.json();window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled)}catch(e){window.NAHAVIDEO_JEV_ENABLED=false}})();
+</script>
+</body>
+</html>
