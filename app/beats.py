@@ -6,7 +6,10 @@ import numpy as np
 
 
 def detect_beats(path, sample_rate: int = 22050) -> dict[str, Any]:
-    """Detect musical beat events locally. Falls back cleanly when librosa is unavailable."""
+    """Detect musical beat events locally. Falls back cleanly when disabled or unavailable."""
+    import os
+    if os.getenv("NAHAVIDEO_ENABLE_AUDIO_INTELLIGENCE", "1").lower() in {"0", "false", "no", "off"}:
+        return {"available": False, "beat_times": [], "bpm": None, "reason": "audio intelligence disabled"}
     try:
         import librosa
     except Exception:
