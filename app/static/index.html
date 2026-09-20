@@ -36,7 +36,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
-  <div class="muted">v0.25</div>
+  <div class="muted">v0.28</div>
 </div>
 
 <section class="panel wide quick">
@@ -156,7 +156,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   </div>
   <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4</button>
   <button id="finalizeBtn" class="secondary" onclick="finalizeApprovedStock()" style="display:none">Rebuild & Finalize with Approved Stock</button>
-  <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button>
+  <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button> <button id="variantsBtn" class="secondary" onclick="renderVariants()" disabled>Render 9:16 + 1:1 + 16:9</button>
   <div id="result" class="status"></div>
 </section>
 <section class="panel wide">
@@ -574,6 +574,22 @@ async function loadDeliveryManifest(){
   return data;
 }
 
+async function renderVariants(){
+  if(!plan){$('result').textContent='Build a plan first.';return;}
+  $('result').textContent='Running Final QA and rendering 9:16, 1:1 and 16:9 variants…';
+  const platforms=[...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+  const r=await fetch('/api/variants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),
+    music_id:musicId,logo_id:logoId,captions:true,platforms
+  })});
+  const data=await r.json();
+  if(!r.ok){$('result').textContent=(data.detail?.message)||data.detail||'Variant rendering blocked.';return;}
+  const links=(data.variants?.results||[]).filter(x=>x.output).map(x=>{
+    const slug=x.aspect.replace(':','x');
+    return '<a href="/api/variants/'+encodeURIComponent(data.id)+'/'+slug" target="_blank">'+esc(x.aspect)+'</a>';
+  }).join(' · ');
+  $('result').innerHTML='Variants complete · '+links;
+}
 async function runFinalQA(){
   if(!plan){$('finalQaStatus').textContent='Build a plan first.';return null;}
   $('finalQaStatus').textContent='Running production QA…';
