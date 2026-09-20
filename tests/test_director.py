@@ -19,7 +19,7 @@ def test_plan_is_30_seconds():
     )
     assert plan["settings"]["priority"] == "food"
     assert plan["settings"]["logo_ending"] is True
-    assert plan["version"] == "0.11"
+    assert plan["version"] == "0.12"
     assert plan["edit_decision_graph"]
     assert plan["timeline"]
 
