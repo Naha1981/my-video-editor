@@ -129,6 +129,7 @@ def render(
     temp = project_dir / "render_parts"
     temp.mkdir(exist_ok=True)
     parts = []
+    caption_path = _write_srt(temp, plan.get("captions", [])) if captions else None
     for i, item in enumerate(plan.get("timeline", [])):
         if item.get("enabled", True) is False:
             continue
@@ -142,23 +143,14 @@ def render(
         duration = float(item["duration"])
         start = float(item.get("source_start", 0))
         filters = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
-        if captions and plan.get("captions"):
-            filters += "," + _subtitle_filter(temp / "captions.srt")
+        if caption_path:
+            filters += "," + _subtitle_filter(caption_path)
         _run([
             "ffmpeg","-y","-v","error","-ss",str(start),"-i",str(src),"-t",str(duration),
             "-vf",filters,"-r","30","-c:v","libx264","-preset","veryfast","-crf","23",
             "-c:a","aac","-ar","48000","-ac","2",str(part)
         ])
         parts.append(part)
-
-    if captions and plan.get("captions"):
-        _write_srt(temp, plan["captions"])
-
-    # Caption files must exist before clip rendering; rerender clips when captions are enabled.
-    if captions and plan.get("captions"):
-        for p in parts:
-            if p.name.startswith("part_"):
-                pass
 
     if not parts:
         raise RuntimeError("No renderable clips in timeline")
