@@ -313,3 +313,10 @@ NahaVideo Web Service
 - Full-bleed hero with animated 3D video wall, live Director viewport, scanning/playhead motion and rotating decision telemetry.
 - Added horizontal product rails, interactive hover cards, live Director demo activity and responsive/reduced-motion behavior.
 - Kept the production editor on /editor.html so the marketing experience and working editor remain distinct.
+
+
+## v0.41 — Interactive Cinematic Product Showcase
+- Landing-page decision cards are now interactive and drive the central Director viewport.
+- Added scene-specific visual states for hero, rhythm, captions, reframing, evidence and delivery.
+- Added scroll reveal choreography and an interactive Director preview control.
+- Reduced-motion mode disables automatic scene cycling and reveal animation.
