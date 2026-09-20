@@ -269,3 +269,9 @@ NahaVideo Web Service
 - Each shot receives its own focal point before aspect-ratio cropping.
 - Reframing decisions are exposed in the variant result metadata.
 - The same approved edit remains the source of truth across all aspect ratios.
+
+
+## v0.31 — Aspect-aware Caption Safe Zones
+- Variant rendering now burns captions after reframing, rather than inheriting captions from the base render.
+- 9:16, 1:1 and 16:9 receive conservative format-specific subtitle margins and sizing.
+- Caption placement is deterministic and recorded in variant metadata.
