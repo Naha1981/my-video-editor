@@ -162,7 +162,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel wide">
   <h2>8. Final QA</h2>
   <div class="metric">NahaVideo checks the production before final delivery: required coverage, source files, stock approval, provenance and timeline duration.</div>
-  <button class="secondary" onclick="runFinalQA()">Run Final QA</button>
+  <button class="secondary" onclick="runFinalQA()">Run Final QA</button> <button class="secondary" onclick="loadDeliveryManifest()">Build Delivery Manifest</button>
   <div id="finalQaStatus" class="status"></div>
   <div id="finalQaChecks" class="clips"></div>
 </section>
@@ -555,6 +555,23 @@ async function finalizeApprovedStock(){
   }catch(err){
     $('stockScoutStatus').textContent='Finalize stopped: '+(err?.message||err);
   }
+}
+
+async function loadDeliveryManifest(){
+  if(!plan){$('finalQaStatus').textContent='Build a plan first.';return null;}
+  $('finalQaStatus').textContent='Building the audit manifest…';
+  const platforms=[...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+  const r=await fetch('/api/delivery-manifest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),
+    music_id:musicId,logo_id:logoId,platforms
+  })});
+  const data=await r.json();
+  if(!r.ok){$('finalQaStatus').textContent=data.detail||'Manifest failed';return data;}
+  const sources=data.sources?.length||0;
+  $('finalQaStatus').textContent='Audit manifest ready · '+sources+' source asset(s) · SHA-256 recorded.';
+  $('finalQaChecks').innerHTML='<div class="clip"><div class="clipTop"><b>DELIVERY MANIFEST</b><span class="badge ai">'+esc(data.manifest_version||'1.0')+'</span></div><div class="metric">Plan '+esc(data.plan_version||'')+' · '+sources+' source asset(s) · '+(data.created_for_platforms||[]).map(esc).join(', ')+'</div></div>'+
+    (data.sources||[]).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge">'+esc((x.sha256||'').slice(0,12))+'…</span></div><div class="metric">Intent: '+esc(x.creative_intent||'')+(x.stock?' · '+esc(x.stock.provider||'stock')+' · approved '+Boolean(x.stock.approved):'')+'</div></div>').join('');
+  return data;
 }
 
 async function runFinalQA(){
