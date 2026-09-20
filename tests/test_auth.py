@@ -11,3 +11,10 @@ def test_auth_session_round_trip(monkeypatch):
     assert token
     assert valid_session(token) is True
     assert valid_session(token+"x") is False
+
+
+def test_auth_requires_explicit_signing_secret(monkeypatch):
+    monkeypatch.setenv("NAHAVIDEO_AUTH_PASSWORD", "secret")
+    monkeypatch.delenv("NAHAVIDEO_AUTH_SECRET", raising=False)
+    from app.auth import enabled
+    assert enabled() is False
