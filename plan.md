@@ -98,3 +98,12 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Aggregation exposes conservative labels, peak evidence, temporal consistency, top semantic labels and the strongest individual frame.
 - Director intent matching consumes the aggregated semantic labels, while explainable shot tags expose multi-frame evidence.
 - A single contradictory frame is less likely to overturn the dominant visual story.
+
+
+## v0.13 — Transcript + Audio-beat-aware Pacing
+- Added local librosa beat detection for background music.
+- Cut boundaries can move toward nearby music beats without knowingly cutting through transcript speech ranges.
+- Dialogue safety takes precedence when a nearby beat conflicts with active speech.
+- Pacing decisions are explainable: `beat_aligned`, `speech_safe`, `speech_preserved` and `unchanged`.
+- The API exposes music BPM/beat timestamps and pacing decisions.
+- The existing deterministic CPU/local-first path remains the fallback when beat analysis is unavailable.
