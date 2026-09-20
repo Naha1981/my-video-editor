@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from .captions import build_caption_track
 
 
 def build_storyboard(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -75,11 +76,8 @@ def add_transcript_captions(plan: dict[str, Any]) -> dict[str, Any]:
             end = float(segment.get("end", start))
             if end <= source_start or start >= source_end:
                 continue
-            captions.append({
-                "start": round(output_offset + max(start, source_start) - source_start, 3),
-                "end": round(output_offset + min(end, source_end) - source_start, 3),
-                "text": str(segment.get("text", "")).strip(),
-            })
+            for cap in build_caption_track([{"start": max(start, source_start), "end": min(end, source_end), "text": str(segment.get("text", ""))}]):
+                captions.append({"start": round(output_offset + cap["start"] - source_start, 3), "end": round(output_offset + cap["end"] - source_start, 3), "text": cap["text"]})
         output_offset += float(item.get("duration", 0))
     result["captions"] = [x for x in captions if x["text"]]
     return result
