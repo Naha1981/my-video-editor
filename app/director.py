@@ -61,6 +61,15 @@ def score_clip(clip: Clip, settings: dict[str, Any], creative_direction: dict[st
         "hero": ["hero", "close", "closeup", "final", "best"],
     }
 
+    semantic = (analysis := (clip.analysis or {})).get("semantic", {})
+    labels = semantic.get("labels", {}) or {}
+    for intent, label in {"hero_food":"food","craft":"chef","experience":"experience","proof":"product","result":"product","cta":"exterior"}.items():
+        if intent in selected.get("shot_sequence", []) and label in labels:
+            relevance=float(labels.get(label, 0) or 0)
+            score += min(10, relevance * 18)
+            if relevance > 0.08:
+                reasons.append(f"AI {label} relevance {relevance * 100:.0f}% for {intent}")
+
     if settings["priority"] == "food":
         hits = sum(1 for k in keyword_groups["food"] if k in name)
         score += min(16, hits * 5)
