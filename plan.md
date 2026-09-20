@@ -1,9 +1,9 @@
-# NahaVideo AI Director — v0.3 Build Plan
+# NahaVideo AI Director — v0.5 Build Plan
 
 ## Goal
 Turn the local-first editor into an explainable AI Director that can combine deterministic media signals with optional local model intelligence.
 
-## v0.3 shipped
+## v0.5 shipped
 - Optional local faster-whisper transcription adapter with word timestamps.
 - Optional local OpenCLIP semantic vision adapter.
 - Director scoring now combines visual quality, food/hero semantic relevance, filename priors and speech signals.
@@ -34,3 +34,17 @@ Optional model:
 - Semantic analysis is generic zero-shot labelling, not a custom NahaLabs-trained restaurant model.
 - Logo animation is currently FFmpeg overlay; the proprietary NahaLabs motion-graphics engine can become the branding layer later.
 - Dialogue ducking is transcript-range based when Whisper is available, with sidechain fallback otherwise.
+
+
+## v0.5 shipped
+- Local website URL intake extracts title, description and visible text using the Python standard library.
+- Deterministic creative-brief compiler produces business category, offer, audience, tone, CTA and visual requirements.
+- Stock-shot requirement generator turns the brief into a practical footage shopping list.
+- Timeline rendering now preserves clip/logo order.
+- Transcript captions can be burned into the rendered MP4 and are rebuilt after timeline edits.
+- NahaLabs motion graphics now has an explicit adapter seam so the proprietary motion engine can replace the FFmpeg fallback.
+
+### Website workflow
+Client website URL → Brand intake → Creative brief → Shot requirements → Footage → AI Director → Storyboard → Captions → NahaLabs motion graphics → MP4
+
+The website intake is intentionally deterministic and local-first. It does not claim to understand a site with an external LLM; the extracted brief remains editable and can later be connected to a local model.
