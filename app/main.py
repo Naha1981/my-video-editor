@@ -31,6 +31,7 @@ from .variants import render_variants
 from .rationale import build_edit_rationale
 from .projects import save_project, load_project, list_projects, normalize_project_id
 from .security import client_ip, env_int, validate_public_url
+from .auth import enabled as auth_enabled, issue_session, valid_session, cookie_options
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
@@ -70,6 +71,21 @@ async def production_guard(request: Request, call_next):
     is_api = path.startswith("/api/")
     if is_api:
         _request_metrics["api_requests"] += 1
+        protected = (
+            request.method not in {"GET", "HEAD", "OPTIONS"}
+            and any(path.startswith(prefix) for prefix in {
+                "/api/upload", "/api/plan", "/api/render", "/api/variants",
+                "/api/projects", "/api/stock-scout", "/api/asset-scout",
+                "/api/cobalt", "/api/assets",
+            })
+            and path not in {"/api/login", "/api/auth/status"}
+        )
+        if protected and auth_enabled() and not valid_session(request.cookies.get("nahavideo_session")):
+            return JSONResponse(
+                {"detail": "Authentication required."},
+                status_code=401,
+                headers={"X-Request-ID": request_id},
+            )
         ip = client_ip(request)
         now = time.monotonic()
         bucket = [t for t in _rate_buckets.get(ip, []) if now - t < 60]
@@ -220,6 +236,33 @@ class ProjectRequest(BaseModel):
     creative_direction: dict | None = None
     command: str = ""
 
+
+@app.get("/api/auth/status")
+def auth_status(request: Request):
+    return {"required": auth_enabled(), "authenticated": valid_session(request.cookies.get("nahavideo_session"))}
+
+
+class LoginRequest(BaseModel):
+    password: str
+
+
+@app.post("/api/login")
+def login(req: LoginRequest, request: Request):
+    if not auth_enabled():
+        return {"required": False, "authenticated": True}
+    token = issue_session(req.password)
+    if not token:
+        raise HTTPException(401, "Invalid password")
+    response = JSONResponse({"required": True, "authenticated": True})
+    response.set_cookie("nahavideo_session", token, **cookie_options(request))
+    return response
+
+
+@app.post("/api/logout")
+def logout():
+    response = JSONResponse({"authenticated": False})
+    response.delete_cookie("nahavideo_session", path="/")
+    return response
 
 @app.get("/api/ready")
 def ready():
