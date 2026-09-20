@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.33.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.34.0")
 
 
 class PlanRequest(BaseModel):
@@ -103,7 +103,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.33.0",
+        "version": "0.34.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
