@@ -10,6 +10,7 @@ import numpy as np
 
 from .transcription import transcribe
 from .vision import semantic_analyze
+from .beats import detect_beats
 
 
 def _ffmpeg_extract_frames(path: Path, fps: float = 2.0, width: int = 320):
@@ -164,4 +165,5 @@ def analyze_audio_intelligence(path: Path) -> dict[str, Any]:
             "reason": f"audio analysis error: {type(exc).__name__}: {exc}",
         }
     transcript = transcribe(path)
-    return {"audio": audio, "transcript": transcript}
+    beats = detect_beats(path)
+    return {"audio": {**audio, "beats": beats}, "transcript": transcript}
