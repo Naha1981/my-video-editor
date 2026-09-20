@@ -77,7 +77,9 @@ def add_transcript_captions(plan: dict[str, Any]) -> dict[str, Any]:
             if end <= source_start or start >= source_end:
                 continue
             for cap in build_caption_track([{"start": max(start, source_start), "end": min(end, source_end), "text": str(segment.get("text", ""))}]):
-                captions.append({"start": round(output_offset + cap["start"] - source_start, 3), "end": round(output_offset + cap["end"] - source_start, 3), "text": cap["text"]})
+                from .captions import enrich_caption
+                enriched = enrich_caption({"start": round(output_offset + cap["start"] - source_start, 3), "end": round(output_offset + cap["end"] - source_start, 3), "text": cap["text"]})
+                captions.append(enriched)
         output_offset += float(item.get("duration", 0))
     result["captions"] = [x for x in captions if x["text"]]
     return result
