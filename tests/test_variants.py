@@ -27,3 +27,18 @@ def test_focal_point_has_safe_center_fallback(tmp_path):
     out = focal_point(tmp_path / "missing.mp4")
     assert out["x"] == 0.5
     assert out["y"] == 0.5
+
+
+def test_render_variants_accepts_timeline_for_per_shot_reframing(tmp_path):
+    import app.variants as variants
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"x")
+    calls = []
+    variants.focal_point = lambda path, sample_time=0.0: calls.append(sample_time) or {"x": 0.5, "y": 0.5, "confidence": 0.1}
+    variants.subprocess.run = lambda *args, **kwargs: type("P", (), {"returncode": 1, "stderr": "expected fixture"})()
+    out = variants.render_variants(
+        source, tmp_path / "out", ["9:16"],
+        timeline=[{"type": "clip", "duration": 2}, {"type": "clip", "duration": 3}],
+    )
+    assert out["reframing"] == "per-shot"
+    assert calls == [0.05, 2.05]
