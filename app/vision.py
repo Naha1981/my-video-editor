@@ -8,6 +8,8 @@ from typing import Any
 import cv2
 import numpy as np
 
+from .semantic_aggregation import aggregate_semantic_scores
+
 _MODEL = None
 _PREPROCESS = None
 _TOKENIZER = None
@@ -96,25 +98,37 @@ def semantic_analyze(path: Path) -> dict[str, Any]:
             text_features = _MODEL.encode_text(_TOKENIZER(texts))
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
-        frame_scores: list[np.ndarray] = []
+        frame_scores: list[dict[str, float]] = []
+        best_frame = {"index": 0, "label": None, "confidence": 0.0}
         with torch.no_grad():
-            for frame in frames:
+            for index, frame in enumerate(frames):
                 image_tensor = _PREPROCESS(Image.fromarray(frame)).unsqueeze(0).to(_DEVICE)
                 image_features = _MODEL.encode_image(image_tensor)
                 image_features /= image_features.norm(dim=-1, keepdim=True)
                 logits = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-                frame_scores.append(logits.squeeze(0).detach().cpu().numpy())
+                values = logits.squeeze(0).detach().cpu().numpy()
+                row = {LABELS[i][0]: round(float(values[i]), 6) for i in range(len(LABELS))}
+                frame_scores.append(row)
+                top_index = int(np.argmax(values))
+                if float(values[top_index]) > best_frame["confidence"]:
+                    best_frame = {
+                        "index": index,
+                        "label": LABELS[top_index][0],
+                        "confidence": round(float(values[top_index]), 4),
+                    }
 
-        avg = np.mean(np.stack(frame_scores), axis=0)
-        raw = {LABELS[i][0]: round(float(avg[i]), 4) for i in range(len(LABELS))}
-        ranked = sorted(raw.items(), key=lambda item: item[1], reverse=True)
+        aggregate = aggregate_semantic_scores(frame_scores)
         return {
             "available": True,
             "enabled": True,
             "device": _DEVICE,
-            "labels": raw,
-            "top_labels": [{"label": k, "confidence": round(v, 4)} for k, v in ranked[:3]],
-            "reason": "local OpenCLIP semantic scoring",
+            "labels": aggregate["labels"],
+            "max_labels": aggregate["max_labels"],
+            "top_labels": aggregate["top_labels"],
+            "frame_count": aggregate["frame_count"],
+            "temporal_consistency": aggregate["temporal_consistency"],
+            "best_frame": best_frame,
+            "reason": "local OpenCLIP multi-frame semantic aggregation",
         }
     except Exception as exc:
         return {
