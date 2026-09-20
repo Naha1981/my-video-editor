@@ -22,6 +22,7 @@ from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stoc
 from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack, validate_final_plan, build_delivery_manifest
+from .variants import render_variants
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
@@ -33,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.27.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.28.0")
 
 
 class PlanRequest(BaseModel):
@@ -102,7 +103,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.27.0",
+        "version": "0.28.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
@@ -463,6 +464,19 @@ def delivery_manifest(req: RenderRequest):
         platforms=req.platforms or [req.platform],
         music_id=req.music_id, logo_id=req.logo_id,
     )
+
+
+@app.post("/api/variants")
+def variants(req: RenderRequest):
+    qa = final_qa(req)
+    if qa.get("status") == "blocked":
+        raise HTTPException(400, {"message": "Final QA blocks variant rendering", "qa": qa})
+    # Reuse the already-rendered base output when available; otherwise require the normal render flow.
+    base = MEDIA / "rendered.mp4"
+    if not base.exists():
+        raise HTTPException(400, "Render the approved base video first")
+    formats = ["9:16", "1:1", "16:9"]
+    return render_variants(base, MEDIA / "variants", formats)
 
 
 @app.post("/api/render")
