@@ -47,7 +47,7 @@ def caption_emphasis(text: str) -> list[str]:
 
 def caption_style(text: str, emphasis: list[str] | None = None) -> str:
     """Choose restrained visual hierarchy from message content, not animation noise."""
-    words = re.findall(r"\\S+", str(text or "").strip())
+    words = re.findall(r"\S+", str(text or "").strip())
     emphasized = emphasis if emphasis is not None else caption_emphasis(text)
     if len(words) <= 4 and emphasized:
         return "hero"
