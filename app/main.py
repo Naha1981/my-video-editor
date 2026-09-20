@@ -27,6 +27,7 @@ from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
 from .services.asset_fetcher import collect_public_assets
 from .services.stock_scout import scout_missing_stock
+from .integrations.cobalt import configured as cobalt_configured, request_media, normalize_candidates, CobaltError
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -70,6 +71,12 @@ class AssetScoutRequest(BaseModel):
     requirements: list[str] = []
 
 
+class CobaltImportRequest(BaseModel):
+    url: str
+    authorized: bool = False
+    video_quality: str = "1080"
+
+
 class StockScoutRequest(BaseModel):
     gaps: list[dict] = []
     max_missions: int = 6
@@ -98,6 +105,10 @@ def health():
         "version": "0.24.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
+        "cobalt": {
+            "enabled": cobalt_configured(),
+            "mode": "self-hosted-only",
+        },
         "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
         "delivery_pack": "ready",
         "nahallm": {
@@ -157,6 +168,31 @@ def asset_scout(req: AssetScoutRequest):
         return result
     except Exception as exc:
         raise HTTPException(400, f"Asset scout failed: {type(exc).__name__}: {exc}")
+
+
+@app.post("/api/cobalt/import")
+def cobalt_import(req: CobaltImportRequest):
+    if not req.authorized:
+        raise HTTPException(400, "Confirm you are authorized to download and reuse this media")
+    if not cobalt_configured():
+        return {
+            "status": "disabled",
+            "message": "Cobalt is not configured. Set NAHAVIDEO_COBALT_API_URL to your self-hosted Cobalt instance.",
+            "candidates": [],
+        }
+    try:
+        response = request_media(req.url, video_quality=req.video_quality)
+        candidates = normalize_candidates(req.url, response)
+        return {
+            "status": "candidates" if candidates else "no_media",
+            "provider": "cobalt",
+            "source_url": req.url,
+            "cobalt_status": response.get("status"),
+            "candidates": candidates,
+            "note": "Review the returned media and import only content you are authorized to use.",
+        }
+    except CobaltError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post("/api/stock-scout")
