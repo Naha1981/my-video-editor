@@ -1,9 +1,14 @@
 from pathlib import Path
 from uuid import uuid4
 import shutil
+import json
+import logging
+import os
+import time
+import shutil as _shutil
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -24,6 +29,8 @@ from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
 from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack, validate_final_plan, build_delivery_manifest
 from .variants import render_variants
 from .rationale import build_edit_rationale
+from .projects import save_project, load_project, list_projects, normalize_project_id
+from .security import client_ip, env_int, validate_public_url
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
@@ -32,10 +39,108 @@ from .services.stock_scout import scout_missing_stock
 from .integrations.cobalt import configured as cobalt_configured, request_media, normalize_candidates, candidate_download_allowed, CobaltError
 
 ROOT = Path(__file__).resolve().parent.parent
-MEDIA = ROOT / "media"
-MEDIA.mkdir(exist_ok=True)
+DEFAULT_DATA_ROOT = Path("/var/data") if Path("/var/data").exists() else ROOT / "data"
+DATA_ROOT = Path(os.getenv("NAHAVIDEO_DATA_DIR", str(DEFAULT_DATA_ROOT)))
+MEDIA = DATA_ROOT / "media"
+PROJECTS = DATA_ROOT / "projects"
+MEDIA.mkdir(parents=True, exist_ok=True)
+PROJECTS.mkdir(parents=True, exist_ok=True)
+
+logger = logging.getLogger("nahavideo")
+logging.basicConfig(
+    level=os.getenv("NAHAVIDEO_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s nahavideo %(message)s",
+)
+
+MAX_VIDEO_UPLOAD_BYTES = env_int("NAHAVIDEO_MAX_VIDEO_UPLOAD_BYTES", 250 * 1024 * 1024, maximum=2 * 1024 * 1024 * 1024)
+MAX_STOCK_UPLOAD_BYTES = env_int("NAHAVIDEO_MAX_STOCK_UPLOAD_BYTES", 250 * 1024 * 1024, maximum=2 * 1024 * 1024 * 1024)
+MAX_AUDIO_UPLOAD_BYTES = env_int("NAHAVIDEO_MAX_AUDIO_UPLOAD_BYTES", 100 * 1024 * 1024, maximum=512 * 1024 * 1024)
+MAX_LOGO_UPLOAD_BYTES = env_int("NAHAVIDEO_MAX_LOGO_UPLOAD_BYTES", 10 * 1024 * 1024, maximum=100 * 1024 * 1024)
+RATE_LIMIT_PER_MINUTE = env_int("NAHAVIDEO_RATE_LIMIT_PER_MINUTE", 120, maximum=1000)
+_rate_buckets: dict[str, list[float]] = {}
+_request_metrics = {"requests": 0, "api_requests": 0, "errors": 0, "renders": 0}
 
 app = FastAPI(title="NahaVideo AI Director", version="0.41.0")
+
+@app.middleware("http")
+async def production_guard(request: Request, call_next):
+    started = time.perf_counter()
+    request_id = uuid4().hex[:12]
+    path = request.url.path
+    is_api = path.startswith("/api/")
+    if is_api:
+        _request_metrics["api_requests"] += 1
+        ip = client_ip(request)
+        now = time.monotonic()
+        bucket = [t for t in _rate_buckets.get(ip, []) if now - t < 60]
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+                return JSONResponse(
+                    {"detail": "Too many requests. Please slow down and try again."},
+                    status_code=429,
+                    headers={"Retry-After": "60", "X-Request-ID": request_id},
+                )
+            bucket.append(now)
+            _rate_buckets[ip] = bucket
+
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                declared = int(content_length)
+            except ValueError:
+                declared = 0
+            limits = {
+                "/api/upload": MAX_VIDEO_UPLOAD_BYTES * 6,
+                "/api/upload-stock": MAX_STOCK_UPLOAD_BYTES + 2 * 1024 * 1024,
+                "/api/upload-music": MAX_AUDIO_UPLOAD_BYTES + 2 * 1024 * 1024,
+                "/api/upload-logo": MAX_LOGO_UPLOAD_BYTES + 1024 * 1024,
+            }
+            limit = limits.get(path)
+            if limit is not None and declared > limit:
+                return JSONResponse(
+                    {"detail": "Upload exceeds the configured request-size limit."},
+                    status_code=413,
+                    headers={"X-Request-ID": request_id},
+                )
+
+    _request_metrics["requests"] += 1
+    try:
+        response = await call_next(request)
+    except Exception:
+        _request_metrics["errors"] += 1
+        logger.exception("request_id=%s method=%s path=%s unhandled_error", request_id, request.method, path)
+        raise
+    duration_ms = (time.perf_counter() - started) * 1000
+    if response.status_code >= 500:
+        _request_metrics["errors"] += 1
+    logger.info(
+        "request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+        request_id, request.method, path, response.status_code, duration_ms,
+    )
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    if request.url.scheme == "https" and os.getenv("NAHAVIDEO_HSTS", "0") == "1":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+async def _save_upload(file: UploadFile, path: Path, max_bytes: int) -> int:
+    total = 0
+    with path.open("wb") as out:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                path.unlink(missing_ok=True)
+                raise HTTPException(413, f"Upload exceeds the {max_bytes // (1024 * 1024)} MB limit")
+            out.write(chunk)
+    return total
 
 
 class PlanRequest(BaseModel):
