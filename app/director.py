@@ -61,7 +61,8 @@ def score_clip(clip: Clip, settings: dict[str, Any], creative_direction: dict[st
         "hero": ["hero", "close", "closeup", "final", "best"],
     }
 
-    semantic = (analysis := (clip.analysis or {})).get("semantic", {})
+    analysis = clip.analysis or {}
+    semantic = analysis.get("semantic", {}) or {}
     labels = semantic.get("labels", {}) or {}
     for intent, label in {"hero_food":"food","craft":"chef","experience":"experience","proof":"product","result":"product","cta":"exterior"}.items():
         if intent in selected.get("shot_sequence", []) and label in labels:
