@@ -206,6 +206,7 @@ async function loginOperator(){
   $('authStatus').textContent='Signed in.';
   $('authPassword').value='';
   await checkAuth();
+  await refreshProjects();
 }
 function saveProject(){
   if(!plan){$('projectStatus').textContent='Build a Director plan before saving.';return;}
