@@ -79,7 +79,17 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel wide">
   <h2>7. Editable timeline</h2>
   <div id="timeline" class="timeline"></div>
-  <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4 with FFmpeg</button>
+  <div class="metric">Delivery pack</div>
+  <div class="pills">
+    <label class="pill"><input class="platformBox" type="checkbox" value="reels" checked> Reels</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="tiktok"> TikTok</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="shorts"> Shorts</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="youtube"> YouTube</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="linkedin"> LinkedIn</label>
+    <label class="pill"><input class="platformBox" type="checkbox" value="facebook"> Facebook</label>
+  </div>
+  <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4</button>
+  <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button>
   <div id="result" class="status"></div>
 </section>
 </div>
@@ -258,6 +268,10 @@ function recomputeUnfilled(){
   plan.unfilled_seconds=Math.max(0,Number(plan.settings.duration)-total);
 }
 
+function selectedPlatforms(){
+  return [...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+}
+
 async function renderVideo(){
   if(!plan)return;
   $('result').textContent='Rendering…';
@@ -265,12 +279,32 @@ async function renderVideo(){
     body:JSON.stringify({
       plan,
       clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
-      music_id:musicId,logo_id:logoId
+      music_id:musicId,logo_id:logoId,platform:(selectedPlatforms()[0]||'reels'),platforms:selectedPlatforms()
     })});
   const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
   const qc=data.delivery_qc||{};
   const qct=qc.status==='verified'?' · FFmpeg Skill QA verified':qc.status==='fallback_only'?' · native FFmpeg fallback':' · QA '+esc(qc.status||'unknown');
   $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a><span class="metric">'+qct+'</span>';
+}
+
+async function renderPack(){
+  if(!plan)return;
+  const platforms=selectedPlatforms();
+  if(!platforms.length){$('result').textContent='Select at least one platform.';return}
+  $('result').textContent='Rendering delivery pack…';
+  const r=await fetch('/api/render-pack',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      plan,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
+      music_id:musicId,logo_id:logoId,platforms
+    })});
+  const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
+  const pack=data.delivery_pack||{};
+  const links=(pack.results||[]).map(x=>x.output?
+    '<a href="/api/render-pack/'+data.id+'/'+encodeURIComponent(x.platform)+'">'+esc(x.label)+'</a>'
+    :'<span>'+esc(x.label)+' unavailable</span>').join(' · ');
+  $('result').innerHTML='<span class="success">Delivery pack ready.</span> '+links+' · <a href="'+data.base_download+'">Base render</a><span class="metric"> '+esc(pack.engine||'native')+'</span>';
+  if(pack.status==='fallback_only') $('result').innerHTML='<span class="success">Base render complete.</span> <a href="'+data.base_download+'">Download base</a><span class="metric"> FFmpeg Skill unavailable; native fallback retained.</span>';
 }
 </script>
 </body>
