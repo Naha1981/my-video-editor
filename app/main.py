@@ -21,7 +21,7 @@ from .stock_search import build_stock_manifest
 from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stock_public
 from .naha_context import compile_context
 from .ffmpeg_skill import available as ffmpeg_skill_available, verify_output
-from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack, validate_final_plan
+from .delivery import build_delivery_pack, normalize_platforms, render_delivery_pack, validate_final_plan, build_delivery_manifest
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.26.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.27.0")
 
 
 class PlanRequest(BaseModel):
@@ -102,7 +102,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.26.0",
+        "version": "0.27.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
@@ -450,6 +450,19 @@ def final_qa(req: RenderRequest):
     clips = {k: v for k, v in clips.items() if v}
     approved = set(req.stock_asset_ids)
     return validate_final_plan(req.plan, clips, approved_stock_ids=approved)
+
+
+@app.post("/api/delivery-manifest")
+def delivery_manifest(req: RenderRequest):
+    requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
+    clips = {cid: _find_media(cid) for cid in requested_ids}
+    clips = {k: v for k, v in clips.items() if v}
+    qa = validate_final_plan(req.plan, clips, approved_stock_ids=set(req.stock_asset_ids))
+    return build_delivery_manifest(
+        req.plan, clips, qa=qa,
+        platforms=req.platforms or [req.platform],
+        music_id=req.music_id, logo_id=req.logo_id,
+    )
 
 
 @app.post("/api/render")
