@@ -20,3 +20,10 @@ def test_crop_filter_contains_focal_bias():
     out = crop_filter(1080, 1920, {"x": 0.72, "y": 0.38})
     assert "0.7200" in out
     assert "0.3800" in out
+
+
+def test_focal_point_has_safe_center_fallback(tmp_path):
+    from app.focal import focal_point
+    out = focal_point(tmp_path / "missing.mp4")
+    assert out["x"] == 0.5
+    assert out["y"] == 0.5
