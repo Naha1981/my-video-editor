@@ -6,6 +6,8 @@ from typing import Any
 
 
 STOCK_SUFFIXES = {".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"}
+MAX_STOCK_BYTES = 500 * 1024 * 1024
+REQUIRED_PROVENANCE = ("provider", "source_url")
 ALLOWED_INTENTS = {
     "hero_food",
     "craft",
@@ -46,6 +48,10 @@ def register_stock_asset(
     if intent not in ALLOWED_INTENTS:
         raise ValueError(f"Unsupported stock intent: {intent}")
     beat = str(beat or "").strip() or intent
+    if approved and (not provider.strip() or not source_url.strip()):
+        raise ValueError("Approved stock requires provider and source URL provenance")
+    if media_path.stat().st_size > MAX_STOCK_BYTES:
+        raise ValueError("Stock asset exceeds the 500 MB safety limit")
     payload = {
         "kind": "stock",
         "beat": beat,
