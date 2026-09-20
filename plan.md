@@ -282,3 +282,9 @@ NahaVideo Web Service
 - Chunk timing proportionally fills each source speech segment.
 - The existing per-format safe zones remain responsible for final placement.
 - Added deterministic caption segmentation tests.
+
+
+## v0.33 — Restrained Caption Emphasis
+- Caption chunks now identify a small set of meaningful commercial/emphasis words.
+- Emphasis is metadata-first; no bouncing-word or noisy kinetic typography is introduced.
+- Normal captions remain visually unchanged.
