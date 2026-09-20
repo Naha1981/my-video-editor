@@ -36,7 +36,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
-  <div class="muted">v0.37</div>
+  <div class="muted">v0.38</div>
 </div>
 
 <section class="panel wide quick">
@@ -107,7 +107,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div id="ranked" class="muted">Upload footage to begin.</div>
 </section>
 
-<section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div>
+<section class="panel wide"><h2>3.5 Director rationale</h2><div class="metric">Why the system selected the shot, timing and creative role.</div><div id="rationale" class="clips"></div></section>\n<section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div>
   <div class="metric" id="operatingLoop"></div></section>
 
 <section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><button class="secondary" onclick="scoutMissingStock()">Find missing stock/B-roll automatically</button><div id="stockScoutStatus" class="status"></div><div id="gaps" class="clips"></div></section>
@@ -174,7 +174,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <script>
 let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null,quickMusicFile=null,quickLogoFile=null;
 
-function toggleAdvanced(){
+function renderRationale(){const box=$('rationale');if(!box)return;const rows=plan?.edit_rationale||[];box.innerHTML=rows.length?rows.map(x=>'<div class="clip"><div class="clipTop"><b>'+escapeHtml(x.decision||'Director decision')+'</b><span class="badge ai">'+escapeHtml(x.confidence||'heuristic')+'</span></div><div class="metric">'+escapeHtml(x.why||'')+'</div></div>').join(''):'No rationale available yet.';}\n\nfunction toggleAdvanced(){
   const wrap=$('advancedWrap'),btn=$('advancedBtn');
   wrap.classList.toggle('show');
   btn.textContent=wrap.classList.contains('show')?'Hide advanced controls':'Show advanced controls';
