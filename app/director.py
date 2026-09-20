@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Any
 
 from .shot_intelligence import intent_fit
+from .sequence import build_story_sequence
 
 @dataclass
 class Clip:
@@ -185,35 +186,28 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
     scored.sort(key=lambda x: x["score"], reverse=True)
 
     remaining = float(settings["duration"])
-    timeline = []
+    timeline, sequence_decisions = build_story_sequence(
+        scored,
+        creative_direction,
+        max_duration=remaining,
+        max_per_clip=max_per,
+    )
     duck_ranges: list[list[float]] = []
     output_offset = 0.0
-    max_per = 4.0 if settings["pace"] == "energetic" else 6.5
 
-    for rank, item in enumerate(scored):
-        if remaining <= 0.25:
-            break
-        clip = item["clip"]
-        cap = min(5.0, max_per + 1.0) if rank == 0 and settings["style"] == "premium" else max_per
-        start, seg = best_window(clip, settings, min(cap, remaining))
-        if seg < 0.6:
+    # Resolve source windows and transcript metadata for the creative sequence.
+    by_id = {item["clip"].id: item["clip"] for item in scored}
+    for item in timeline:
+        clip = by_id.get(item.get("clip_id"))
+        if not clip:
             continue
-        timeline_item = {
-            "id": f"cut_{len(timeline) + 1}",
-            "type": "clip",
-            "enabled": True,
-            "clip_id": clip.id,
-            "filename": clip.filename,
-            "source_start": start,
-            "source_end": round(start + seg, 3),
-            "duration": round(seg, 3),
-            "score": item["score"],
-            "reasons": item["reasons"],
-            "speech_ranges_source": (clip.analysis or {}).get("transcript", {}).get("speech_ranges", []),
-            "transcript_segments_source": (clip.analysis or {}).get("transcript", {}).get("segments", []),
-        }
-        timeline.append(timeline_item)
-        duck_ranges.extend(_mapped_duck_ranges(timeline_item, clip, output_offset))
+        start, seg = best_window(clip, settings, min(float(item["duration"]), remaining))
+        item["source_start"] = start
+        item["source_end"] = round(start + seg, 3)
+        item["duration"] = round(seg, 3)
+        item["speech_ranges_source"] = (clip.analysis or {}).get("transcript", {}).get("speech_ranges", [])
+        item["transcript_segments_source"] = (clip.analysis or {}).get("transcript", {}).get("segments", [])
+        duck_ranges.extend(_mapped_duck_ranges(item, clip, output_offset))
         remaining -= seg
         output_offset += seg
 
@@ -243,7 +237,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.5",
+        "version": "0.9",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
@@ -259,7 +253,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         ],
         "timeline": timeline,
         "unfilled_seconds": round(max(0, remaining), 3),
-        "edit_decision_graph": decisions,
+        "edit_decision_graph": decisions + [{"step": len(decisions) + 1, "action": "sequence", "rule": "Construct ordered creative story from intent-fit shots", "sequence": sequence_decisions}],
         "audio": {
             "dialogue_ducking_requested": settings["music_ducking"],
             "background_music": False,
