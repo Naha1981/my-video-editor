@@ -23,7 +23,7 @@
       <div class="wallCard wall3"><div class="scene city"></div><div class="scanline"></div><div class="label"><span>05 / PROOF</span><span>68%</span></div></div>
     </div>
     <div class="centerFrame">
-      <div class="centerVideo"></div><div class="centerHUD">
+      <div class="centerVideo" id="centerVideo"></div><div class="centerHUD">
         <div class="hudTop"><span>NAHAVIDEO / LIVE CUT</span><span>00:18:42</span></div>
         <div class="hudBottom"><div class="hudTitle" id="heroDecision">HERO / STRONGEST FOOD SHOT</div><div class="hudSub" id="heroEvidence">visual intent fit · 91%</div><div class="hudBar"><i></i></div></div>
       </div>
@@ -42,12 +42,12 @@
 <section class="rail" id="workflow">
   <div class="railHeader"><h2>The Director is thinking.</h2><p>A live production system, not a chatbot.</p></div>
   <div class="row">
-    <article class="card food"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Find the hero.</b><span>Visual quality + intent fit</span></div></article>
-    <article class="card cut"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Shape the rhythm.</b><span>Speech + beat-aware pacing</span></div></article>
-    <article class="card caption"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Write with restraint.</b><span>Hierarchy + safe zones</span></div></article>
-    <article class="card reframe"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Reframe the story.</b><span>Per-shot focal intelligence</span></div></article>
-    <article class="card evidence"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Show the evidence.</b><span>Explainable decisions</span></div></article>
-    <article class="card delivery"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Deliver everywhere.</b><span>Platform-ready variants</span></div></article>
+    <article class="card food revealCard" data-scene="hero" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Find the hero.</b><span>Visual quality + intent fit</span></div></article>
+    <article class="card cut revealCard" data-scene="rhythm" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Shape the rhythm.</b><span>Speech + beat-aware pacing</span></div></article>
+    <article class="card caption revealCard" data-scene="caption" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Write with restraint.</b><span>Hierarchy + safe zones</span></div></article>
+    <article class="card reframe revealCard" data-scene="reframe" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Reframe the story.</b><span>Per-shot focal intelligence</span></div></article>
+    <article class="card evidence revealCard" data-scene="evidence" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Show the evidence.</b><span>Explainable decisions</span></div></article>
+    <article class="card delivery revealCard" data-scene="delivery" tabindex="0" role="button"><div class="cardScene"></div><div class="cardOverlay"></div><div class="cardText"><b>Deliver everywhere.</b><span>Platform-ready variants</span></div></article>
   </div>
 </section>
 
@@ -56,7 +56,7 @@
   <div class="directorPanel">
     <div class="directorTop"><span>NAHAVIDEO / DIRECTOR ACTIVITY</span><span class="liveDot">LIVE DECISIONS</span></div>
     <div class="directorBody">
-      <div class="demoScreen"><div class="demoBackdrop"></div><div class="demoFood"></div><div class="demoScan"></div><div class="demoPlay"><span></span></div><div class="demoCopy"><b id="demoTitle">Hook: lead with the strongest food shot.</b><span id="demoSub">SHOT 04 · VISUAL INTENT FIT 91%</span></div></div>
+      <div class="demoScreen"><div class="demoBackdrop"></div><div class="demoFood"></div><div class="demoScan"></div><button class="demoPlay" id="demoPlay" aria-label="Replay Director preview"><span></span></button><div class="demoCopy"><b id="demoTitle">Hook: lead with the strongest food shot.</b><span id="demoSub">SHOT 04 · VISUAL INTENT FIT 91%</span></div></div>
       <div class="demoSide">
         <div class="decisionRow"><small>SHOT SELECTION</small><b id="d1">Hero food / 91%</b><div class="barMeter"><i style="--w:91%"></i></div></div>
         <div class="decisionRow"><small>PACE</small><b id="d2">Energetic / beat aligned</b><div class="barMeter"><i style="--w:78%"></i></div></div>
@@ -93,7 +93,7 @@
   <div style="max-width:860px"><div class="eyebrow">READY WHEN YOU ARE</div><h2>Stop starting at the timeline.<br>Start with the story.</h2><p class="sectionLead">Upload footage, state the outcome, and let the Director build a cut you can inspect.</p><div class="heroActions"><a class="btn primary" href="/editor.html">Open NahaVideo Editor →</a></div></div>
 </section>
 
-<footer class="footer"><span>NAHALABS / NAHAVIDEO AI DIRECTOR</span><span>v0.40 · INTELLIGENT VIDEO SYSTEMS</span></footer>
+<footer class="footer"><span>NAHALABS / NAHAVIDEO AI DIRECTOR</span><span>v0.41 · INTELLIGENT VIDEO SYSTEMS</span></footer>
 <script>
 const nav=document.getElementById('nav');
 addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>28),{passive:true});
