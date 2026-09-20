@@ -203,7 +203,7 @@ async function createVideo(){
 
     if(website){
       setQuickStatus('2/4 — Understanding the client and finding useful brand assets…');
-      await loadBrief();
+      await loadBrief(true);
     }else{
       setQuickStatus('2/4 — Preparing the creative direction…');
     }
@@ -218,7 +218,7 @@ async function createVideo(){
     }
 
     setQuickStatus('4/4 — Rendering your finished video…');
-    await renderPack();
+    await renderPack(true);
 
     const pending=stockAssets.filter(x=>!x.approved).length;
     if(pending){
@@ -237,8 +237,14 @@ async function createVideo(){
   }
 }
 
-function JevStatusEnabled(){
-  return Boolean(window.NAHAVIDEO_JEV_ENABLED);
+async function JevStatusEnabled(){
+  if(typeof window.NAHAVIDEO_JEV_ENABLED==='boolean') return window.NAHAVIDEO_JEV_ENABLED;
+  try{
+    const r=await fetch('/api/health');
+    const d=await r.json();
+    window.NAHAVIDEO_JEV_ENABLED=Boolean(d?.jev?.enabled);
+  }catch(e){window.NAHAVIDEO_JEV_ENABLED=false;}
+  return window.NAHAVIDEO_JEV_ENABLED;
 }
 
 function showStockReview(){
@@ -324,11 +330,11 @@ async function scoutAssets(){
   if(data.errors?.length) $('assetScoutStatus').textContent += ' · '+esc(data.errors[0]);
 }
 
-async function loadBrief(){
+async function loadBrief(automatic=false){
   const url=$('siteUrl').value.trim(); if(!url)return;
   $('briefStatus').textContent='Reading website metadata and visible text locally…';
   const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value,command:$('command').value})});
-  const data=await r.json(); if(!r.ok){$('briefStatus').textContent=data.detail||'Website intake failed';return}
+  const data=await r.json(); if(!r.ok){const message=data.detail||'Website intake failed';$('briefStatus').textContent=message;if(automatic)throw new Error(message);return}
   const b=data.creative_brief;
   creativeBrief=b;
   creativeDirection=b.direction||null;
@@ -360,7 +366,7 @@ async function uploadLogo(){
   if(!r.ok){$('status').textContent=data.detail||'Logo upload failed';return null}return data.id;
 }
 
-async function makePlan(){
+async function makePlan(automatic=false){
   if(!clips.length)return;
   $('status').textContent='Director is building the edit decision graph…';
   musicId=await uploadMusic();logoId=await uploadLogo();
@@ -371,7 +377,7 @@ async function makePlan(){
       stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
     })});
-  plan=await r.json();if(!r.ok){$('status').textContent=plan.detail||JSON.stringify(plan);return}
+  plan=await r.json();if(!r.ok){const message=plan.detail||JSON.stringify(plan);$('status').textContent=message;if(automatic)throw new Error(message);return}
   renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
   const ctx=plan.naha_context||{};
   $('nahaContext').innerHTML=[
@@ -490,14 +496,14 @@ async function renderVideo(){
       clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
       music_id:musicId,logo_id:logoId,platform:(selectedPlatforms()[0]||'reels'),platforms:selectedPlatforms()
     })});
-  const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
+  const data=await r.json();if(!r.ok){const message=data.detail||JSON.stringify(data);$('result').textContent=message;if(automatic)throw new Error(message);return null}
   const qc=data.delivery_qc||{};
   const qct=qc.status==='verified'?' · FFmpeg Skill QA verified':qc.status==='fallback_only'?' · native FFmpeg fallback':' · QA '+esc(qc.status||'unknown');
   $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a><span class="metric">'+qct+'</span>';
 }
 
-async function renderPack(){
-  if(!plan)return;
+async function renderPack(automatic=false){
+  if(!plan)return null;
   const platforms=selectedPlatforms();
   if(!platforms.length){$('result').textContent='Select at least one platform.';return}
   $('result').textContent='Rendering delivery pack…';
@@ -514,6 +520,7 @@ async function renderPack(){
     :'<span>'+esc(x.label)+' unavailable</span>').join(' · ');
   $('result').innerHTML='<span class="success">Delivery pack ready.</span> '+links+' · <a href="'+data.base_download+'">Base render</a><span class="metric"> '+esc(pack.engine||'native')+'</span>';
   if(pack.status==='fallback_only') $('result').innerHTML='<span class="success">Base render complete.</span> <a href="'+data.base_download+'">Download base</a><span class="metric"> FFmpeg Skill unavailable; native fallback retained.</span>';
+  return data;
 }
 </script>
 <script>
