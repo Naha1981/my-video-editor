@@ -25,12 +25,13 @@ from .delivery import build_delivery_pack, normalize_platforms, render_delivery_
 from .integrations.nahallm import NahaLLMClient
 from .integrations.jev import JevBrowserAgent
 from .services.asset_scout import scout_website_assets
+from .services.asset_fetcher import collect_public_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.20.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.22.0")
 
 
 class PlanRequest(BaseModel):
@@ -88,7 +89,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.20.0",
+        "version": "0.22.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "ffmpeg_skill": "available" if ffmpeg_skill_available() else "native-ffmpeg-fallback",
@@ -119,6 +120,11 @@ def brief_from_url(req: BriefRequest):
                 req.prompt,
                 metadata={"command": req.command, "automatic": True},
             )
+            if creative["asset_scout"].get("assets"):
+                creative["asset_scout"]["collected_assets"] = collect_public_assets(
+                    creative["asset_scout"]["assets"],
+                    source_url=req.url,
+                )
         return {"site": site, "creative_brief": creative, "naha_context": naha_context}
     except Exception as e:
         raise HTTPException(400, f"Website intake failed: {e}")
@@ -137,6 +143,11 @@ def asset_scout(req: AssetScoutRequest):
             req.task,
             metadata={"requirements": req.requirements, "manual": True},
         )
+        if result.get("assets"):
+            result["collected_assets"] = collect_public_assets(
+                result["assets"],
+                source_url=req.url,
+            )
         return result
     except Exception as exc:
         raise HTTPException(400, f"Asset scout failed: {type(exc).__name__}: {exc}")
@@ -332,7 +343,8 @@ def render_video(req: RenderRequest):
 
 @app.post("/api/render-pack")
 def render_pack(req: RenderRequest):
-    clips = {cid: _find_media(cid) for cid in req.clip_ids}
+    requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
+    clips = {cid: _find_media(cid) for cid in requested_ids}
     clips = {k: v for k, v in clips.items() if v}
     if not clips:
         raise HTTPException(404, "No clips found")
