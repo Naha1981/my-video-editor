@@ -144,3 +144,12 @@ def test_storyboard_uses_creative_intent():
     assert board[0]["creative_intent"] == "hero_food"
     assert board[1]["creative_intent"] == "craft"
     assert board[-1]["creative_intent"] == "cta"
+
+
+def test_creative_intent_affects_clip_score():
+    from app.director import Clip, score_clip
+    clip=Clip(id="1",filename="hero_food_closeup.mp4",duration=5,width=1080,height=1920,analysis={"visual_score":70})
+    base,_=score_clip(clip,{"priority":"food"},{"selected":{"shot_sequence":["experience","cta"]}})
+    matched,reasons=score_clip(clip,{"priority":"food"},{"selected":{"shot_sequence":["hero_food","cta"]}})
+    assert matched > base
+    assert any("creative shot-intent" in x for x in reasons)
