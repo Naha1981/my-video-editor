@@ -172,6 +172,32 @@ def stock_scout(req: StockScoutRequest):
         raise HTTPException(400, f"Stock scout failed: {type(exc).__name__}: {exc}")
 
 
+
+@app.get("/api/assets/{asset_id}")
+def get_asset(asset_id: str):
+    path = _find_media(asset_id)
+    if not path:
+        raise HTTPException(404, "Asset not found")
+    return FileResponse(path)
+
+
+@app.post("/api/assets/{asset_id}/approve")
+def approve_asset(asset_id: str):
+    path = _find_media(asset_id)
+    if not path:
+        raise HTTPException(404, "Asset not found")
+    stock = (enrich_analysis_with_stock({}, path).get("stock") or {})
+    if stock.get("kind") != "stock":
+        raise HTTPException(400, "Only stock assets can be approved here")
+    stock["approved"] = True
+    stock["provenance_status"] = "approved_by_operator"
+    path.with_suffix(path.suffix + ".stock.json").write_text(
+        __import__("json").dumps(stock, indent=2),
+        encoding="utf-8",
+    )
+    return {"id": asset_id, **stock}
+
+
 @app.post("/api/upload")
 async def upload(files: list[UploadFile] = File(...)):
     results = []
