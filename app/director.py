@@ -1,6 +1,8 @@
 from dataclasses import dataclass, asdict
 from typing import Any
 
+from .shot_intelligence import intent_fit
+
 @dataclass
 class Clip:
     id: str
@@ -64,6 +66,12 @@ def score_clip(clip: Clip, settings: dict[str, Any], creative_direction: dict[st
     analysis = clip.analysis or {}
     semantic = analysis.get("semantic", {}) or {}
     labels = semantic.get("labels", {}) or {}
+    for intent in selected.get("shot_sequence", []):
+        fit = intent_fit(analysis, str(intent))
+        if fit > 0:
+            score += min(10, fit * 12)
+            reasons.append(f"visual intent fit {intent}: {fit * 100:.0f}%")
+
     for intent, label in {"hero_food":"food","craft":"chef","experience":"experience","proof":"product","result":"product","cta":"exterior"}.items():
         if intent in selected.get("shot_sequence", []) and label in labels:
             relevance=float(labels.get(label, 0) or 0)
