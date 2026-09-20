@@ -130,6 +130,19 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 </section>
 
 <section class="panel wide">
+  <h2>6.5 Import media from URL</h2>
+  <div class="metric">Optional Cobalt adapter. Use only media you are authorized to download and reuse. NahaVideo uses a self-hosted Cobalt instance when configured; it does not silently use a public downloader.</div>
+  <div class="grid" style="margin-top:10px">
+    <input id="cobaltUrl" placeholder="Paste an Instagram / TikTok / YouTube / other supported URL">
+    <select id="cobaltQuality"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option><option value="max">Maximum</option></select>
+  </div>
+  <label class="metric" style="display:block;margin-top:8px"><input id="cobaltAuthorized" type="checkbox" style="width:auto"> I am authorized to download and reuse this media.</label>
+  <button class="secondary" onclick="importWithCobalt()">Import Media</button>
+  <div id="cobaltStatus" class="status"></div>
+  <div id="cobaltCandidates" class="clips"></div>
+</section>
+
+<section class="panel wide">
   <h2>7. Editable timeline</h2>
   <div id="timeline" class="timeline"></div>
   <div class="metric">Delivery pack</div>
@@ -368,6 +381,23 @@ async function uploadLogo(){
   if(!r.ok){$('status').textContent=data.detail||'Logo upload failed';return null}return data.id;
 }
 
+async function importWithCobalt(){
+  const url=$('cobaltUrl').value.trim();
+  if(!url){$('cobaltStatus').textContent='Paste a media URL first.';return;}
+  if(!$('cobaltAuthorized').checked){$('cobaltStatus').textContent='Confirm you are authorized to download and reuse this media.';return;}
+  $('cobaltStatus').textContent='Asking the configured Cobalt instance for media…';
+  const r=await fetch('/api/cobalt/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,authorized:true,video_quality:$('cobaltQuality').value})});
+  const data=await r.json();
+  if(!r.ok){$('cobaltStatus').textContent=data.detail||'Cobalt import failed';return;}
+  if(data.status==='disabled'){$('cobaltStatus').textContent=data.message;return;}
+  $('cobaltCandidates').innerHTML=(data.candidates||[]).map((x,i)=>
+    '<div class="clip"><div class="clipTop"><b>'+esc(x.filename||('Media '+(i+1)))+'</b><span class="badge">COBALT</span></div>'+
+    '<div class="metric">Source: '+esc(data.source_url||'')+'</div>'+
+    '<a href="'+esc(x.url)+'" target="_blank" rel="noreferrer">Open media</a></div>'
+  ).join('') || '<div class="muted">Cobalt returned no importable media.</div>';
+  $('cobaltStatus').textContent='Media candidates returned. Review them before importing into the project.';
+}
+
 async function makePlan(automatic=false){
   if(!clips.length)return;
   $('status').textContent='Director is building the edit decision graph…';
@@ -376,7 +406,6 @@ async function makePlan(automatic=false){
     body:JSON.stringify({
       prompt:$('prompt').value,command:$('command').value,duration:30,
       clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
-      stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
     })});
