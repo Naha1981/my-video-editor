@@ -42,9 +42,18 @@ def _semantic_relevance(clip: Clip, key: str, fallback: float = .0) -> float:
     return float(labels.get(key, fallback) or fallback)
 
 
-def score_clip(clip: Clip, settings: dict[str, Any]) -> tuple[float, list[str]]:
+def score_clip(clip: Clip, settings: dict[str, Any], creative_direction: dict[str, Any] | None = None) -> tuple[float, list[str]]:
     name = clip.filename.lower()
     score = 50.0
+    creative_direction = creative_direction or {}
+    selected = creative_direction.get("selected", {}) or {}
+    intent_text = " ".join(str(x) for x in selected.get("shot_sequence", []))
+    if intent_text:
+        hints = [x.replace("_", " ") for x in selected.get("shot_sequence", [])]
+        hits = sum(1 for h in hints if h and any(part in name for part in h.split()))
+        if hits:
+            score += min(12, hits * 4)
+            reasons.append("creative shot-intent filename signal")
     reasons: list[str] = []
     keyword_groups = {
         "food": ["food", "dish", "meal", "burger", "pizza", "steak", "dessert", "plate", "chef", "kitchen", "restaurant"],
