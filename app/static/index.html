@@ -41,6 +41,8 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel">
   <h2>2. Creative brief</h2>
   <textarea id="prompt">Create a 30-second premium restaurant advertisement. Start with the strongest food shot, remove dead time, keep the pacing energetic, lower the music under dialogue, and finish with the NahaLabs logo.</textarea>
+  <div class="metric">NahaLabs command (optional)</div><input id="command" value="/lead-gen /reel /nahalabs-authentic" placeholder="/cargoiq /lead-gen /facebook-ad /nahalabs-authentic">
+  <div id="nahaContext" class="pills"></div>
   <div class="metric">Client website URL (optional)</div><input id="siteUrl" placeholder="https://client.co.za"><button class="secondary" onclick="loadBrief()">Understand website</button><div id="briefStatus" class="status"></div><div id="concepts" class="pills"></div><div id="briefSummary" class="metric"></div><div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
   <div class="metric" style="margin-top:10px">Optional NahaLabs logo</div><input id="logo" type="file" accept="image/png,image/jpeg,image/webp">
   <button id="planBtn" onclick="makePlan()" disabled>Build AI edit plan</button>
@@ -52,7 +54,8 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <div id="ranked" class="muted">Upload footage to begin.</div>
 </section>
 
-<section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div></section>
+<section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div>
+  <div class="metric" id="operatingLoop"></div></section>
 
 <section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><div id="gaps" class="clips"></div></section>
 
@@ -133,7 +136,7 @@ function renderStockAssets(){
 async function loadBrief(){
   const url=$('siteUrl').value.trim(); if(!url)return;
   $('briefStatus').textContent='Reading website metadata and visible text locally…';
-  const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value})});
+  const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value,command:$('command').value})});
   const data=await r.json(); if(!r.ok){$('briefStatus').textContent=data.detail||'Website intake failed';return}
   const b=data.creative_brief;
   creativeBrief=b;
@@ -171,13 +174,18 @@ async function makePlan(){
   musicId=await uploadMusic();logoId=await uploadLogo();
   const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      prompt:$('prompt').value,duration:30,
+      prompt:$('prompt').value,command:$('command').value,duration:30,
       clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
       stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
     })});
   plan=await r.json();if(!r.ok){$('status').textContent=plan.detail||JSON.stringify(plan);return}
   renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
+  const ctx=plan.naha_context||{};
+  $('nahaContext').innerHTML=[
+    ctx.lane_label,ctx.product_label,ctx.objective_label,ctx.format_label,
+    ctx.authenticity_profile?'NahaLabs Authenticity':null
+  ].filter(Boolean).map(x=>'<span class="pill">'+esc(x)+'</span>').join('');
   const chosen=plan.creative_direction?.selected;
   if(chosen) $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
   $('renderBtn').disabled=false;
@@ -190,6 +198,7 @@ function renderPlan(){
     $('briefSummary').textContent=chosen.promise+' Proof: '+chosen.proof+' CTA: '+chosen.cta;
   }
   const gd=plan.footage_gaps;
+  if(ctx.objective_label) $('briefSummary').textContent=ctx.objective_label+(ctx.product_label?' · '+ctx.product_label:'')+(ctx.lane_label?' · '+ctx.lane_label:'');
   if(gd){
     $('gapsSummary').textContent=gd.gap_count
       ? gd.gap_count+' footage gap(s) detected · '+gd.required_gap_count+' required'
@@ -201,6 +210,7 @@ function renderPlan(){
       return '<div class="clip"><div class="clipTop"><b>'+esc(g.priority.toUpperCase())+' · '+esc(g.beat)+'</b><span class="badge">'+esc(g.status)+'</span></div><div class="muted">'+esc(g.need)+'</div><div class="metric">Search: '+esc(g.search_hint)+' · intent fit '+Math.round(g.intent_fit*100)+'%'+(links?' · '+links:'')+'</div></div>'
     }).join('');
   }
+  $('operatingLoop').textContent='Operating loop: '+(ctx.operating_loop||['find','understand','act','learn']).join(' → ');
   $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">intent: '+esc(b.creative_intent||'')+' · '+esc(b.purpose||'')+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
     const sem=x.analysis?.semantic?.top_labels||[],tr=x.analysis?.transcript||{};
