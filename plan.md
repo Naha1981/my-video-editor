@@ -124,3 +124,12 @@ The website intake is intentionally deterministic and local-first. It does not c
 - Creative intent scoring can use the strongest verified semantic evidence from a specific shot window.
 - The existing CPU-only path remains unchanged when OpenCLIP is disabled.
 - Vision output now distinguishes whole-source semantic evidence from per-shot temporal evidence.
+
+
+## v0.16 — Stock/B-roll Search Manifest
+- Converts Director-detected missing footage into explicit stock search jobs.
+- Each missing beat gets a semantic search query and provider-ready search destinations.
+- Includes Pexels, Pixabay and Mixkit search routes without requiring API keys.
+- Keeps stock acquisition explicit: the Director never silently invents or substitutes footage.
+- API plans now expose a stock manifest alongside footage gaps.
+- This adapter is the seam for future provider APIs and automatic asset ingestion.
