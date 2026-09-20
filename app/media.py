@@ -118,6 +118,13 @@ def _subtitle_filter(path: Path) -> str:
     return f"subtitles='{value}':force_style='FontName=Arial,FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=120'"
 
 
+def _render_profile() -> tuple[str, str]:
+    profile = __import__("os").getenv("NAHAVIDEO_RENDER_PROFILE", "default").lower()
+    if profile == "render_free":
+        return "720:1280", "ultrafast"
+    return "1080:1920", "veryfast"
+
+
 def render(
     project_dir: Path,
     plan: dict,
@@ -128,6 +135,7 @@ def render(
     captions: bool = True,
 ) -> None:
     temp = project_dir / "render_parts"
+    output_size, video_preset = _render_profile()
     temp.mkdir(exist_ok=True)
     parts = []
     caption_path = _write_srt(temp, plan.get("captions", [])) if captions else None
@@ -143,12 +151,12 @@ def render(
         src = clips[item["clip_id"]]
         duration = float(item["duration"])
         start = float(item.get("source_start", 0))
-        filters = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
+        filters = f"scale={output_size}:force_original_aspect_ratio=decrease,pad={output_size}:(ow-iw)/2:(oh-ih)/2"
         if caption_path:
             filters += "," + _subtitle_filter(caption_path)
         _run([
             "ffmpeg","-y","-v","error","-ss",str(start),"-i",str(src),"-t",str(duration),
-            "-vf",filters,"-r","30","-c:v","libx264","-preset","veryfast","-crf","23",
+            "-vf",filters,"-r","30","-c:v","libx264","-preset",video_preset,"-crf","25",
             "-c:a","aac","-ar","48000","-ac","2",str(part)
         ])
         parts.append(part)
@@ -161,7 +169,7 @@ def render(
     base = temp / "base.mp4"
     _run([
         "ffmpeg","-y","-v","error","-f","concat","-safe","0","-i",str(concat),
-        "-vf","format=yuv420p","-r","30","-c:v","libx264","-preset","veryfast","-crf","23",
+        "-vf","format=yuv420p","-r","30","-c:v","libx264","-preset",video_preset,"-crf","25",
         "-c:a","aac","-ar","48000","-ac","2",str(base)
     ])
 
