@@ -169,3 +169,41 @@ def test_shot_intelligence_builds_explainable_tags():
     info=classify_shot(analysis)
     assert "food" in info["tags"] and "hero_candidate" in info["tags"]
     assert intent_fit(analysis,"hero_food") == 0.82
+
+
+def test_story_sequence_orders_creative_intents_and_avoids_duplicates():
+    from app.sequence import build_story_sequence
+    clips = [
+        Clip("food", "food.mp4", "x", 6, 1080, 1920, 30, {"visual_score": 80, "semantic": {"labels": {"food": 0.9}}}),
+        Clip("chef", "chef.mp4", "x", 6, 1080, 1920, 30, {"visual_score": 75, "semantic": {"labels": {"chef": 0.9}}}),
+        Clip("people", "people.mp4", "x", 6, 1080, 1920, 30, {"visual_score": 70, "semantic": {"labels": {"experience": 0.8}}}),
+        Clip("store", "store.mp4", "x", 6, 1920, 1080, 30, {"visual_score": 70, "semantic": {"labels": {"exterior": 0.85}}}),
+    ]
+    scored = [{"clip": c, "score": 70 + i, "reasons": []} for i, c in enumerate(clips)]
+    timeline, decisions = build_story_sequence(
+        scored,
+        {"selected": {"shot_sequence": ["hero_food", "craft", "experience", "cta"]}},
+        max_duration=12,
+        max_per_clip=3,
+    )
+    assert [x["creative_intent"] for x in timeline] == ["hero_food", "craft", "experience", "cta"]
+    assert len({x["clip_id"] for x in timeline}) == len(timeline)
+    assert sum(x["duration"] for x in timeline) <= 12
+    assert all(x["status"] == "selected" for x in decisions)
+
+
+def test_story_sequence_falls_back_when_required_cta_has_no_semantic_match():
+    from app.sequence import build_story_sequence
+    clips = [
+        Clip("food", "food.mp4", "x", 5, 1080, 1920, 30, {"visual_score": 90, "semantic": {"labels": {"food": 0.9}}}),
+        Clip("chef", "chef.mp4", "x", 5, 1080, 1920, 30, {"visual_score": 80, "semantic": {"labels": {"chef": 0.8}}}),
+    ]
+    scored = [{"clip": c, "score": 80, "reasons": []} for c in clips]
+    timeline, decisions = build_story_sequence(
+        scored,
+        {"selected": {"shot_sequence": ["hero_food", "craft", "cta"]}},
+        max_duration=8,
+        max_per_clip=3,
+    )
+    assert timeline[0]["creative_intent"] == "hero_food"
+    assert any(d["intent"] == "cta" and d["status"] == "unfilled" for d in decisions)
