@@ -283,7 +283,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.41.0",
+        "version": "0.43.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
