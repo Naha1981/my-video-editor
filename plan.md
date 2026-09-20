@@ -275,3 +275,10 @@ NahaVideo Web Service
 - Variant rendering now burns captions after reframing, rather than inheriting captions from the base render.
 - 9:16, 1:1 and 16:9 receive conservative format-specific subtitle margins and sizing.
 - Caption placement is deterministic and recorded in variant metadata.
+
+
+## v0.32 — Smart Caption Segmentation
+- Transcript captions are now split into short readable chunks using word and character limits.
+- Chunk timing proportionally fills each source speech segment.
+- The existing per-format safe zones remain responsible for final placement.
+- Added deterministic caption segmentation tests.
