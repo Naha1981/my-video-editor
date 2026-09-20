@@ -159,6 +159,14 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button>
   <div id="result" class="status"></div>
 </section>
+<section class="panel wide">
+  <h2>8. Final QA</h2>
+  <div class="metric">NahaVideo checks the production before final delivery: required coverage, source files, stock approval, provenance and timeline duration.</div>
+  <button class="secondary" onclick="runFinalQA()">Run Final QA</button>
+  <div id="finalQaStatus" class="status"></div>
+  <div id="finalQaChecks" class="clips"></div>
+</section>
+
 </div>
 </div>
 </main>
@@ -547,6 +555,19 @@ async function finalizeApprovedStock(){
   }catch(err){
     $('stockScoutStatus').textContent='Finalize stopped: '+(err?.message||err);
   }
+}
+
+async function runFinalQA(){
+  if(!plan){$('finalQaStatus').textContent='Build a plan first.';return null;}
+  $('finalQaStatus').textContent='Running production QA…';
+  const r=await fetch('/api/final-qa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    plan,clip_ids:clips.map(x=>x.id),stock_asset_ids:stockAssets.filter(x=>x.approved).map(x=>x.id),music_id:musicId,logo_id:logoId
+  })});
+  const data=await r.json();
+  if(!r.ok){$('finalQaStatus').textContent=data.detail||'Final QA failed';return data;}
+  $('finalQaStatus').textContent=data.status==='ready'?'FINAL QA PASSED — ready to render.':data.status.toUpperCase()+' — resolve blockers before final delivery.';
+  $('finalQaChecks').innerHTML=(data.checks||[]).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.id)+'</b><span class="badge '+(x.status==='pass'?'ai':'')+'">'+esc(x.status.toUpperCase())+'</span></div><div class="metric">'+esc(x.message)+'</div></div>').join('');
+  return data;
 }
 
 async function renderVideo(){
