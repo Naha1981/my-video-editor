@@ -308,15 +308,16 @@ def brief_from_url(req: BriefRequest):
         creative["naha_context"] = naha_context
         creative["direction"] = creative_direction(creative, req.prompt, naha_context)
         if NahaLLMClient().enabled or JevBrowserAgent().enabled:
+            safe_url = validate_public_url(req.url, label="website URL")
             creative["asset_scout"] = scout_website_assets(
-                req.url,
+                safe_url,
                 req.prompt,
                 metadata={"command": req.command, "automatic": True},
             )
             if creative["asset_scout"].get("assets"):
                 creative["asset_scout"]["collected_assets"] = collect_public_assets(
                     creative["asset_scout"]["assets"],
-                    source_url=safe_source_url,
+                    source_url=safe_url,
                 )
         return {"site": site, "creative_brief": creative, "naha_context": naha_context}
     except Exception as e:
@@ -387,7 +388,7 @@ def cobalt_ingest(req: CobaltImportRequest):
                     beat="imported",
                     intent="result",
                     provider="cobalt",
-                    source_url=req.url,
+                    source_url=safe_source_url,
                     license_name="operator-confirmed",
                     attribution="",
                     approved=False,
@@ -479,8 +480,7 @@ async def upload(files: list[UploadFile] = File(...)):
             raise HTTPException(400, f"Unsupported video type: {suffix}")
         cid = uuid4().hex[:12]
         path = MEDIA / f"{cid}{suffix}"
-        with path.open("wb") as out:
-            shutil.copyfileobj(f.file, out)
+        await _save_upload(f, path, MAX_VIDEO_UPLOAD_BYTES)
         try:
             meta = ffprobe(path)
             analysis = analyze_media(path)
@@ -510,8 +510,7 @@ async def upload_stock(
         raise HTTPException(400, f"Unsupported stock video type: {suffix}")
     sid = uuid4().hex[:12]
     path = MEDIA / f"{sid}{suffix}"
-    with path.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+    await _save_upload(file, path, MAX_STOCK_UPLOAD_BYTES)
     try:
         meta = ffprobe(path)
         register_stock_asset(
@@ -539,8 +538,7 @@ async def upload_music(file: UploadFile = File(...)):
         raise HTTPException(400, f"Unsupported music type: {suffix}")
     mid = uuid4().hex[:12]
     path = MEDIA / f"{mid}{suffix}"
-    with path.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+    await _save_upload(file, path, MAX_AUDIO_UPLOAD_BYTES)
     try:
         meta = ffprobe(path)
     except Exception as e:
@@ -556,8 +554,7 @@ async def upload_logo(file: UploadFile = File(...)):
         raise HTTPException(400, "Logo must be PNG, JPG or WebP")
     lid = uuid4().hex[:12]
     path = MEDIA / f"{lid}{suffix}"
-    with path.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+    await _save_upload(file, path, MAX_LOGO_UPLOAD_BYTES)
     return {"id": lid, "filename": file.filename}
 
 
@@ -670,6 +667,7 @@ def variants(req: RenderRequest):
 
 @app.post("/api/render")
 def render_video(req: RenderRequest):
+    _request_metrics["renders"] += 1
     requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
     clips = {cid: _find_media(cid) for cid in requested_ids}
     clips = {k: v for k, v in clips.items() if v}
@@ -706,6 +704,7 @@ def render_video(req: RenderRequest):
 
 @app.post("/api/render-pack")
 def render_pack(req: RenderRequest):
+    _request_metrics["renders"] += 1
     requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
     clips = {cid: _find_media(cid) for cid in requested_ids}
     clips = {k: v for k, v in clips.items() if v}
