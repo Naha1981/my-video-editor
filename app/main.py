@@ -14,12 +14,14 @@ from .brief import fetch_brand, compile_creative_brief
 from .stock import shot_requirements
 from .creative import creative_direction
 from .gaps import detect_footage_gaps
+from .beats import detect_beats
+from .pacing import align_cut_boundaries
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.10.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.13.0")
 
 
 class PlanRequest(BaseModel):
@@ -52,7 +54,7 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.10.0"}
+    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.13.0"}
 
 
 @app.post("/api/brief-from-url")
@@ -138,7 +140,25 @@ def plan(req: PlanRequest):
     result = build_plan(clips, req.prompt, req.duration, direction)
     result["storyboard"] = build_storyboard(result)
     result = add_transcript_captions(result)
-    result["audio"]["background_music"] = bool(req.music_id and _find_media(req.music_id))
+    music_path = _find_media(req.music_id) if req.music_id else None
+    result["audio"]["background_music"] = bool(music_path)
+    if music_path:
+        beat_info = detect_beats(music_path)
+        result["audio"]["music_beats"] = beat_info
+        if beat_info.get("beat_times"):
+            result["timeline"], pacing_decisions = align_cut_boundaries(
+                result["timeline"],
+                beat_info["beat_times"],
+                total_duration=float(req.duration),
+                tolerance=0.28,
+            )
+            result["pacing_decisions"] = pacing_decisions
+            result = sanitize_plan(result, set(req.clip_ids), float(req.duration))
+        else:
+            result["pacing_decisions"] = []
+    else:
+        result["audio"]["music_beats"] = {"available": False, "beat_times": [], "bpm": None, "reason": "no background music"}
+        result["pacing_decisions"] = []
     result["audio"]["music_id"] = req.music_id
     result["branding"]["logo_id"] = req.logo_id if req.logo_id and _find_media(req.logo_id) else None
     brief = req.creative_brief or {"category": result["settings"].get("priority") == "food" and "restaurant" or "business"}
