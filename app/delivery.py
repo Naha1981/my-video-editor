@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
+import json
 from typing import Any
 
 from .ffmpeg_skill import run_tool, available as ffmpeg_skill_available
@@ -199,4 +201,55 @@ def validate_final_plan(
         "blocker_count": blocker_count,
         "warning_count": warning_count,
         "checks": checks,
+    }
+
+
+def build_delivery_manifest(
+    plan: dict[str, Any],
+    clips: dict[str, Path],
+    *,
+    qa: dict[str, Any],
+    platforms: list[str] | None = None,
+    music_id: str | None = None,
+    logo_id: str | None = None,
+) -> dict[str, Any]:
+    """Create an auditable manifest for the exact edit submitted to delivery."""
+    sources = []
+    for item in plan.get("timeline", []):
+        if item.get("type") != "clip":
+            continue
+        cid = str(item.get("clip_id") or "")
+        path = clips.get(cid)
+        if not path or not path.exists():
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        stock = {}
+        sidecar = path.with_suffix(path.suffix + ".stock.json")
+        if sidecar.exists():
+            try:
+                stock = json.loads(sidecar.read_text(encoding="utf-8"))
+            except Exception:
+                stock = {}
+        sources.append({
+            "id": cid,
+            "filename": path.name,
+            "sha256": digest,
+            "duration": item.get("duration"),
+            "creative_intent": item.get("creative_intent"),
+            "stock": stock or None,
+        })
+    return {
+        "manifest_version": "1.0",
+        "product": "NahaVideo AI Director",
+        "plan_version": plan.get("version"),
+        "created_for_platforms": normalize_platforms(platforms),
+        "creative_direction": plan.get("creative_direction"),
+        "naha_context": plan.get("naha_context"),
+        "settings": plan.get("settings"),
+        "timeline": plan.get("timeline", []),
+        "sources": sources,
+        "music_id": music_id or (plan.get("audio") or {}).get("music_id"),
+        "logo_id": logo_id or (plan.get("branding") or {}).get("logo_id"),
+        "footage_gaps": plan.get("footage_gaps"),
+        "qa": qa,
     }
