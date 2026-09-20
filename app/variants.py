@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 import subprocess
+from .focal import focal_point, crop_filter
 
 FORMATS = {
     "9:16": (1080, 1920),
@@ -33,7 +34,7 @@ def render_variants(source: Path, output_dir: Path, formats: list[str] | None = 
         ]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if p.returncode == 0 and output.exists():
-            results.append({"aspect": aspect, "width": width, "height": height, "output": str(output), "status": "complete"})
+            results.append({"aspect": aspect, "width": width, "height": height, "output": str(output), "status": "complete", "focal": focal})
         else:
             results.append({"aspect": aspect, "width": width, "height": height, "output": None, "status": "failed", "error": p.stderr[-2000:]})
     return {
