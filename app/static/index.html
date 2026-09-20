@@ -441,7 +441,7 @@ async function makePlan(automatic=false){
   ].filter(Boolean).map(x=>'<span class="pill">'+esc(x)+'</span>').join('');
   const chosen=plan.creative_direction?.selected;
   if(chosen) $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
-  $('renderBtn').disabled=false;$('packBtn').disabled=false;
+  $('renderBtn').disabled=false;$('packBtn').disabled=false;$('variantsBtn').disabled=false;
 }
 
 async function scoutMissingStock(automatic=false){
