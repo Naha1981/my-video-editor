@@ -85,6 +85,15 @@ def render_delivery_pack(
             ["--template", spec["template"], str(source), "-o", str(output), "--json"],
             timeout=300,
         )
+        qa = None
+        if output.exists():
+            probe = run_tool("probe.py", [str(output), "--json"])
+            check = run_tool("check.py", [str(output), "--platform", key, "--json"])
+            qa = {
+                "status": "verified" if probe.get("status") == "ok" and check.get("status") == "ok" else "failed",
+                "probe": probe.get("data"),
+                "check": check.get("data"),
+            }
         results.append({
             "platform": key,
             "label": spec["label"],
@@ -92,8 +101,9 @@ def render_delivery_pack(
             "status": result.get("status"),
             "result": result.get("data"),
             "error": result.get("stderr"),
+            "qa": qa,
         })
-    ok = all(x["status"] == "ok" and x["output"] for x in results)
+    ok = all(x["status"] == "ok" and x["output"] and (x["qa"] or {}).get("status") == "verified" for x in results)
     return {
         "status": "complete" if ok else "partial",
         "engine": "ffmpeg-skill",
