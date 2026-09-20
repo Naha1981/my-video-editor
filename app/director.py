@@ -210,6 +210,16 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         item["duration"] = round(seg, 3)
         item["speech_ranges_source"] = (clip.analysis or {}).get("transcript", {}).get("speech_ranges", [])
         item["transcript_segments_source"] = (clip.analysis or {}).get("transcript", {}).get("segments", [])
+        mapped_speech = []
+        for speech_start, speech_end in (clip.analysis or {}).get("transcript", {}).get("speech_ranges", [])[:200]:
+            overlap_start = max(float(speech_start), start)
+            overlap_end = min(float(speech_end), start + seg)
+            if overlap_end - overlap_start >= 0.12:
+                mapped_speech.append([
+                    round(output_offset + overlap_start - start, 3),
+                    round(output_offset + overlap_end - start, 3),
+                ])
+        item["speech_ranges_output"] = mapped_speech
         duck_ranges.extend(_mapped_duck_ranges(item, clip, output_offset))
         remaining -= seg
         output_offset += seg
@@ -240,7 +250,7 @@ def build_plan(clips: list[Clip], prompt: str, duration: int, creative_direction
         decisions.append({"step": 5, "action": "brand", "rule": "Finish with NahaLabs end card"})
 
     return {
-        "version": "0.12",
+        "version": "0.13",
         "prompt": prompt,
         "settings": settings,
         "creative_direction": creative_direction,
