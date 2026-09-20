@@ -192,6 +192,11 @@ async function makePlan(){
 }
 
 function renderPlan(){
+  const ctx=plan.naha_context||{};
+  $('nahaContext').innerHTML=[
+    ctx.lane_label,ctx.product_label,ctx.objective_label,ctx.format_label,
+    ctx.authenticity_profile?'NahaLabs Authenticity':null
+  ].filter(Boolean).map(x=>'<span class="pill">'+esc(x)+'</span>').join('');
   const chosen=plan.creative_direction?.selected;
   if(chosen){
     $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
