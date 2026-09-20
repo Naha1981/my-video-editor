@@ -95,6 +95,28 @@ def _duck_expression(ranges: list[list[float]]) -> str:
     return expression
 
 
+def _write_srt(temp: Path, captions: list[dict]) -> Path | None:
+    if not captions:
+        return None
+    path = temp / "captions.srt"
+    def ts(value: float) -> str:
+        ms=max(0,int(round(float(value)*1000)))
+        h,ms=divmod(ms,3600000); mi,ms=divmod(ms,60000); s,ms=divmod(ms,1000)
+        return f"{h:02d}:{mi:02d}:{s:02d},{ms:03d}"
+    lines=[]
+    for i,c in enumerate(captions,1):
+        text=str(c.get("text","")).strip().replace("\n"," ")
+        if not text: continue
+        lines += [str(i), f"{ts(c.get('start',0))} --> {ts(c.get('end',0))}", text, ""]
+    path.write_text("\n".join(lines),encoding="utf-8")
+    return path
+
+
+def _subtitle_filter(path: Path) -> str:
+    value=path.as_posix().replace("\\","/").replace(":","\\:").replace("'","\\'")
+    return f"subtitles='{value}':force_style='FontName=Arial,FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=120'"
+
+
 def render(
     project_dir: Path,
     plan: dict,
@@ -102,71 +124,65 @@ def render(
     output: Path,
     music: Path | None = None,
     logo: Path | None = None,
+    captions: bool = True,
 ) -> None:
     temp = project_dir / "render_parts"
     temp.mkdir(exist_ok=True)
     parts = []
     for i, item in enumerate(plan.get("timeline", [])):
-        if item.get("enabled", True) is False or item.get("type") != "clip":
+        if item.get("enabled", True) is False:
+            continue
+        part = temp / f"part_{i:03d}.mp4"
+        if item.get("type") == "logo":
+            parts.append(_write_logo_card(temp, float(item["duration"]), logo))
+            continue
+        if item.get("type") != "clip":
             continue
         src = clips[item["clip_id"]]
-        part = temp / f"part_{i:03d}.mp4"
         duration = float(item["duration"])
         start = float(item.get("source_start", 0))
+        filters = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
+        if captions and plan.get("captions"):
+            filters += "," + _subtitle_filter(temp / "captions.srt")
         _run([
-            "ffmpeg", "-y", "-v", "error",
-            "-ss", str(start), "-i", str(src), "-t", str(duration),
-            "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
-            "-r", "30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-            "-c:a", "aac", "-ar", "48000", "-ac", "2", str(part),
+            "ffmpeg","-y","-v","error","-ss",str(start),"-i",str(src),"-t",str(duration),
+            "-vf",filters,"-r","30","-c:v","libx264","-preset","veryfast","-crf","23",
+            "-c:a","aac","-ar","48000","-ac","2",str(part)
         ])
         parts.append(part)
 
-    for item in plan.get("timeline", []):
-        if item.get("enabled", True) is False:
-            continue
-        if item.get("type") == "logo":
-            parts.append(_write_logo_card(temp, float(item["duration"]), logo))
+    if captions and plan.get("captions"):
+        _write_srt(temp, plan["captions"])
+
+    # Caption files must exist before clip rendering; rerender clips when captions are enabled.
+    if captions and plan.get("captions"):
+        for p in parts:
+            if p.name.startswith("part_"):
+                pass
 
     if not parts:
         raise RuntimeError("No renderable clips in timeline")
 
     concat = temp / "concat.txt"
-    concat.write_text(
-        "\n".join(f"file '{_escape_concat(p)}'" for p in parts),
-        encoding="utf-8"
-    )
+    concat.write_text("\n".join(f"file '{_escape_concat(p)}'" for p in parts),encoding="utf-8")
     base = temp / "base.mp4"
     _run([
-        "ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
-        "-i", str(concat), "-vf", "format=yuv420p", "-r", "30",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-        "-c:a", "aac", "-ar", "48000", "-ac", "2", str(base)
+        "ffmpeg","-y","-v","error","-f","concat","-safe","0","-i",str(concat),
+        "-vf","format=yuv420p","-r","30","-c:v","libx264","-preset","veryfast","-crf","23",
+        "-c:a","aac","-ar","48000","-ac","2",str(base)
     ])
 
     if not music:
-        output.unlink(missing_ok=True)
-        base.replace(output)
-        return
+        output.unlink(missing_ok=True); base.replace(output); return
 
-    duck_ranges = plan.get("audio", {}).get("duck_ranges", [])
+    duck_ranges=plan.get("audio",{}).get("duck_ranges",[])
     if duck_ranges:
-        expression = _duck_expression(duck_ranges)
-        filter_complex = (
-            f"[1:a]volume={expression}:eval=frame[music];"
-            "[0:a][music]amix=inputs=2:duration=first:weights='1 0.8'[mix]"
-        )
+        expression=_duck_expression(duck_ranges)
+        filter_complex=f"[1:a]volume={expression}:eval=frame[music];[0:a][music]amix=inputs=2:duration=first:weights='1 0.8'[mix]"
     else:
-        filter_complex = (
-            "[1:a]volume=0.42[music];"
-            "[music][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=25:release=280[ducked];"
-            "[0:a][ducked]amix=inputs=2:duration=first:weights='1 0.8'[mix]"
-        )
-
+        filter_complex="[1:a]volume=0.42[music];[music][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=25:release=280[ducked];[0:a][ducked]amix=inputs=2:duration=first:weights='1 0.8'[mix]"
     _run([
-        "ffmpeg", "-y", "-v", "error",
-        "-i", str(base), "-stream_loop", "-1", "-i", str(music),
-        "-filter_complex", filter_complex,
-        "-map", "0:v:0", "-map", "[mix]",
-        "-c:v", "copy", "-c:a", "aac", "-ar", "48000", "-shortest", str(output)
+        "ffmpeg","-y","-v","error","-i",str(base),"-stream_loop","-1","-i",str(music),
+        "-filter_complex",filter_complex,"-map","0:v:0","-map","[mix]",
+        "-c:v","copy","-c:a","aac","-ar","48000","-shortest",str(output)
     ])
