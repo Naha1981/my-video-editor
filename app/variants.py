@@ -6,6 +6,46 @@ import subprocess
 
 from .focal import focal_point, crop_filter
 
+
+
+CAPTION_SAFE_ZONES = {
+    "9:16": {"alignment": 2, "margin_v": 220, "font_size": 20},
+    "1:1": {"alignment": 2, "margin_v": 110, "font_size": 18},
+    "16:9": {"alignment": 2, "margin_v": 70, "font_size": 22},
+}
+
+
+def caption_safe_zone(aspect: str) -> dict[str, Any]:
+    """Return conservative subtitle placement for each delivery aspect."""
+    return dict(CAPTION_SAFE_ZONES.get(aspect, CAPTION_SAFE_ZONES["16:9"]))
+
+
+def _write_srt(path: Path, captions: list[dict[str, Any]]) -> Path | None:
+    if not captions:
+        return None
+    def ts(value: float) -> str:
+        ms=max(0,int(round(float(value)*1000)))
+        h,ms=divmod(ms,3600000); mi,ms=divmod(ms,60000); s,ms=divmod(ms,1000)
+        return f"{h:02d}:{mi:02d}:{s:02d},{ms:03d}"
+    lines=[]
+    for i,item in enumerate(captions,1):
+        text=str(item.get("text","")).strip().replace("\n"," ")
+        if text:
+            lines += [str(i), f"{ts(item.get('start',0))} --> {ts(item.get('end',0))}", text, ""]
+    if not lines:
+        return None
+    path.write_text("\n".join(lines),encoding="utf-8")
+    return path
+
+
+def _subtitle_filter(path: Path, zone: dict[str, Any]) -> str:
+    value=path.as_posix().replace("\\","/").replace(":","\\:").replace("'","\\'")
+    return (
+        f"subtitles='{value}':force_style='FontName=Arial,FontSize={zone['font_size']},"
+        f"PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,"
+        f"Shadow=0,Alignment={zone['alignment']},MarginV={zone['margin_v']}'"
+    )
+
 FORMATS = {
     "9:16": (1080, 1920),
     "1:1": (1080, 1080),
@@ -23,6 +63,7 @@ def render_variants(
     output_dir: Path,
     formats: list[str] | None = None,
     timeline: list[dict[str, Any]] | None = None,
+    captions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Render aspect variants, optionally reframing each Director timeline shot independently."""
     if not source.exists():
@@ -41,6 +82,8 @@ def render_variants(
         slug = aspect.replace(":", "x")
         output = output_dir / f"{source.stem}_{slug}.mp4"
         focal_records = []
+        zone = caption_safe_zone(aspect)
+        srt = _write_srt(output_dir / f"{slug}_captions.srt", captions or [])
         part_paths = []
         cursor = 0.0
         work = output_dir / f"{slug}_parts"
@@ -53,7 +96,7 @@ def render_variants(
                 part = work / f"part_{i:03d}.mp4"
                 ok, err = _run([
                     "ffmpeg", "-y", "-v", "error", "-ss", str(cursor), "-i", str(source),
-                    "-t", str(duration), "-vf", crop_filter(width, height, focal),
+                    "-t", str(duration), "-vf", crop_filter(width, height, focal) + ("," + _subtitle_filter(srt, zone) if srt else ""),
                     "-r", "30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
                     "-c:a", "aac", "-ar", "48000", "-ac", "2", str(part),
                 ])
@@ -97,4 +140,5 @@ def render_variants(
         "source": str(source),
         "results": results,
         "reframing": "per-shot" if segments else "single-source",
+        "caption_safe_zones": {aspect: caption_safe_zone(aspect) for aspect in selected},
     }
