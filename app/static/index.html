@@ -36,7 +36,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
-  <div class="muted">v0.23</div>
+  <div class="muted">v0.24</div>
 </div>
 
 <section class="panel wide quick">
@@ -142,6 +142,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
     <label class="pill"><input class="platformBox" type="checkbox" value="facebook"> Facebook</label>
   </div>
   <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4</button>
+  <button id="finalizeBtn" class="secondary" onclick="finalizeApprovedStock()" style="display:none">Rebuild & Finalize with Approved Stock</button>
   <button id="packBtn" class="secondary" onclick="renderPack()" disabled>Render Delivery Pack</button>
   <div id="result" class="status"></div>
 </section>
@@ -307,6 +308,7 @@ async function approveCollectedAsset(id){
   if(item){item.approved=true;item.provenance_status=data.provenance_status||'approved_by_operator';}
   renderStockAssets();
   $('stockScoutStatus').textContent='Asset approved for the edit. Rebuild the AI edit plan to include it.';
+  $('finalizeBtn').style.display='inline-block';
 }
 
 function renderStockAssets(){
@@ -374,6 +376,7 @@ async function makePlan(automatic=false){
     body:JSON.stringify({
       prompt:$('prompt').value,command:$('command').value,duration:30,
       clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
+      stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
       music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
     })});
@@ -485,6 +488,21 @@ function recomputeUnfilled(){
 
 function selectedPlatforms(){
   return [...document.querySelectorAll('.platformBox:checked')].map(x=>x.value);
+}
+
+async function finalizeApprovedStock(){
+  const approved=stockAssets.filter(x=>x.approved).map(x=>x.id);
+  if(!approved.length){$('stockScoutStatus').textContent='No approved stock is ready.';return;}
+  $('stockScoutStatus').textContent='Rebuilding the edit with approved stock…';
+  try{
+    await makePlan(true);
+    $('stockScoutStatus').textContent='Approved stock is now part of the Director timeline. Rendering final delivery pack…';
+    await renderPack(true);
+    $('finalizeBtn').style.display='none';
+    setQuickStatus('Done — final video rebuilt with approved stock.','ok');
+  }catch(err){
+    $('stockScoutStatus').textContent='Finalize stopped: '+(err?.message||err);
+  }
 }
 
 async function renderVideo(){
