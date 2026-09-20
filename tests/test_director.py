@@ -153,3 +153,11 @@ def test_creative_intent_affects_clip_score():
     matched,reasons=score_clip(clip,{"priority":"food"},{"selected":{"shot_sequence":["hero_food","cta"]}})
     assert matched > base
     assert any("creative shot-intent" in x for x in reasons)
+
+
+def test_semantic_label_can_match_creative_intent():
+    from app.director import Clip, score_clip
+    clip=Clip(id="1",filename="camera_001.mp4",duration=5,width=1080,height=1920,analysis={"visual_score":70,"semantic":{"labels":{"experience":0.75}}})
+    score,reasons=score_clip(clip,{"priority":"visual_story"},{"selected":{"shot_sequence":["experience","cta"]}})
+    assert score > 50
+    assert any("AI experience relevance" in x for x in reasons)
