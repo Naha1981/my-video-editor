@@ -12,6 +12,7 @@ from .director import Clip, build_plan, sanitize_plan
 from .storyboard import build_storyboard, add_transcript_captions
 from .brief import fetch_brand, compile_creative_brief
 from .stock import shot_requirements
+from .creative import creative_direction
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
@@ -57,6 +58,7 @@ def brief_from_url(req: BriefRequest):
         site = fetch_brand(req.url)
         creative = compile_creative_brief(site, req.prompt)
         creative["shot_requirements"] = shot_requirements(creative)
+        creative["direction"] = creative_direction(creative, req.prompt)
         return {"site": site, "creative_brief": creative}
     except Exception as e:
         raise HTTPException(400, f"Website intake failed: {e}")
@@ -129,7 +131,8 @@ def plan(req: PlanRequest):
             cid, path.name, str(path), meta["duration"], meta["width"],
             meta["height"], meta["fps"], analysis
         ))
-    result = build_plan(clips, req.prompt, req.duration)
+    direction = req.creative_direction or creative_direction({}, req.prompt)
+    result = build_plan(clips, req.prompt, req.duration, direction)
     result["storyboard"] = build_storyboard(result)
     result = add_transcript_captions(result)
     result["audio"]["background_music"] = bool(req.music_id and _find_media(req.music_id))
