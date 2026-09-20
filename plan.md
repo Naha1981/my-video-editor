@@ -255,3 +255,10 @@ NahaVideo Web Service
 - Variants are generated from the same sanitized Director timeline rather than independently inventing edits.
 - Variant rendering is gated by the Final QA checks.
 - Added downloadable variant routes and a one-click UI action.
+
+
+## v0.29 — Intelligent Variant Reframing
+- Added lightweight local focal-point detection for multi-format rendering.
+- Face detection is preferred when a face is visible; otherwise a contrast/edge saliency proxy estimates the visual focal point.
+- Variant crops are biased toward the detected focal point instead of blindly center-cropping.
+- No new ML model dependency is required.
