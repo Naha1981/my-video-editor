@@ -19,7 +19,7 @@ def test_plan_is_30_seconds():
     )
     assert plan["settings"]["priority"] == "food"
     assert plan["settings"]["logo_ending"] is True
-    assert plan["version"] == "0.15"
+    assert plan["version"] == "0.17"
     assert plan["edit_decision_graph"]
     assert plan["timeline"]
 
@@ -254,3 +254,32 @@ def test_footage_gap_detector_reports_covered_beats():
     )
     assert out["status"] == "ready"
     assert out["gap_count"] == 0
+
+
+def test_approved_stock_matches_exact_creative_intent():
+    from app.shot_intelligence import intent_fit
+    analysis = {"stock": {"kind": "stock", "approved": True, "intent": "cta"}}
+    assert intent_fit(analysis, "cta") == 1.0
+    assert intent_fit(analysis, "hero_food") == 0.0
+
+
+def test_pending_stock_is_not_selected_by_story_sequence():
+    from app.sequence import build_story_sequence
+    pending = Clip(
+        "stock", "stock.mp4", "x", 5, 1920, 1080, 30,
+        {"stock": {"kind": "stock", "approved": False, "intent": "cta"}},
+    )
+    food = Clip(
+        "food", "food.mp4", "x", 5, 1080, 1920, 30,
+        {"visual_score": 80, "semantic": {"labels": {"food": 0.9}}},
+    )
+    timeline, _ = build_story_sequence(
+        [
+            {"clip": pending, "score": 100, "reasons": []},
+            {"clip": food, "score": 80, "reasons": []},
+        ],
+        {"selected": {"shot_sequence": ["hero_food"]}},
+        max_duration=4,
+        max_per_clip=3,
+    )
+    assert timeline[0]["clip_id"] == "food"
