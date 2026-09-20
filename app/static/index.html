@@ -36,7 +36,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Give us the footage. We handle the edit.</div></div>
-  <div class="muted">v0.24</div>
+  <div class="muted">v0.25</div>
 </div>
 
 <section class="panel wide quick">
@@ -393,9 +393,24 @@ async function importWithCobalt(){
   $('cobaltCandidates').innerHTML=(data.candidates||[]).map((x,i)=>
     '<div class="clip"><div class="clipTop"><b>'+esc(x.filename||('Media '+(i+1)))+'</b><span class="badge">COBALT</span></div>'+
     '<div class="metric">Source: '+esc(data.source_url||'')+'</div>'+
-    '<a href="'+esc(x.url)+'" target="_blank" rel="noreferrer">Open media</a></div>'
+    '<a href="'+esc(x.url)+'" target="_blank" rel="noreferrer">Open candidate</a></div>'
   ).join('') || '<div class="muted">Cobalt returned no importable media.</div>';
-  $('cobaltStatus').textContent='Media candidates returned. Review them before importing into the project.';
+  $('cobaltStatus').textContent='Media candidates returned. Importing them keeps them pending until you approve provenance.';
+  const ingest=await fetch('/api/cobalt/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,authorized:true,video_quality:$('cobaltQuality').value})});
+  const imported=await ingest.json();
+  if(ingest.ok && imported.assets?.length){
+    for(const x of imported.assets){
+      if(!stockAssets.some(a=>a.id===x.id)){
+        stockAssets.push({...x,approved:false,kind:'stock',provenance_status:'pending'});
+      }
+    }
+    renderStockAssets();
+    $('cobaltStatus').textContent='Imported '+imported.assets.length+' media asset(s) into the pending Asset Library. Review provenance before use.';
+  }else if(ingest.ok){
+    $('cobaltStatus').textContent='Cobalt returned candidates, but none could be safely imported. Review the candidate URLs.';
+  }else{
+    $('cobaltStatus').textContent='Candidates found, but automatic ingestion was blocked. Review the candidate URLs.';
+  }
 }
 
 async function makePlan(automatic=false){
