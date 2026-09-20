@@ -262,3 +262,10 @@ NahaVideo Web Service
 - Face detection is preferred when a face is visible; otherwise a contrast/edge saliency proxy estimates the visual focal point.
 - Variant crops are biased toward the detected focal point instead of blindly center-cropping.
 - No new ML model dependency is required.
+
+
+## v0.30 — Per-shot Intelligent Reframing
+- Variant rendering now accepts the Director timeline and analyzes each shot independently.
+- Each shot receives its own focal point before aspect-ratio cropping.
+- Reframing decisions are exposed in the variant result metadata.
+- The same approved edit remains the source of truth across all aspect ratios.
