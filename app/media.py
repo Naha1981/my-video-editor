@@ -56,6 +56,8 @@ def _escape_concat(path: Path) -> str:
 
 def _write_logo_card(temp: Path, duration: float, logo: Path | None = None) -> Path:
     card = temp / f"logo_card_{int(duration * 1000)}.mp4"
+    output_size, video_preset = _render_profile()
+    width, height = output_size.split(":")
     draw = (
         "drawtext=text='NAHALABS':fontcolor=white:fontsize=92:"
         "x=(w-text_w)/2:y=(h-text_h)/2+250,"
@@ -65,7 +67,7 @@ def _write_logo_card(temp: Path, duration: float, logo: Path | None = None) -> P
     if logo and logo.exists():
         _run([
             "ffmpeg", "-y", "-v", "error",
-            "-f", "lavfi", "-i", "color=c=0b0d0f:s=1080x1920:r=30",
+            "-f", "lavfi", "-i", f"color=c=0b0d0f:s={width}x{height}:r=30",
             "-loop", "1", "-i", str(logo),
             "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
             "-t", str(duration),
@@ -73,7 +75,7 @@ def _write_logo_card(temp: Path, duration: float, logo: Path | None = None) -> P
             f"[1:v]scale=460:460:force_original_aspect_ratio=decrease[lg];"
             f"[0:v][lg]overlay=(W-w)/2:(H-h)/2-120,{draw}[v]",
             "-map", "[v]", "-map", "2:a:0",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+            "-c:v", "libx264", "-preset", video_preset, "-crf", "25",
             "-c:a", "aac", "-ar", "48000", "-ac", "2", "-shortest", str(card),
         ])
     else:
