@@ -1,6 +1,7 @@
 import json, subprocess
 from pathlib import Path
 from .analysis import analyze_video, analyze_audio_intelligence
+from .motion import render_brand_card
 
 
 def ffprobe(path: Path) -> dict:
@@ -135,7 +136,7 @@ def render(
             continue
         part = temp / f"part_{i:03d}.mp4"
         if item.get("type") == "logo":
-            parts.append(_write_logo_card(temp, float(item["duration"]), logo))
+            parts.append(render_brand_card(temp, float(item["duration"]), logo))
             continue
         if item.get("type") != "clip":
             continue
