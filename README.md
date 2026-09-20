@@ -23,7 +23,7 @@ Turn a natural-language creative brief into an executable video edit:
 
 NahaVideo is designed to run locally and evolve toward CPU-friendly/open-source AI components.
 
-Current milestone: v0.20 multi-platform delivery packs.
+Current milestone: v0.21 Browser Asset Scout + NahaLLM.
 
 ## Status
 
