@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from .transcription import transcribe
-from .vision import semantic_analyze
+from .vision import semantic_analyze, semantic_analyze_window
 from .beats import detect_beats
 
 
@@ -68,6 +68,11 @@ def _hist(frame):
     return h
 
 
+def ffprobe_duration(path: Path) -> float:
+    p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)], capture_output=True, text=True, timeout=30)
+    return max(0.0, float(p.stdout.strip() or 0))
+
+
 def analyze_video(path: Path) -> dict[str, Any]:
     frames, sample_fps = _ffmpeg_extract_frames(path)
     if not frames:
@@ -92,6 +97,20 @@ def analyze_video(path: Path) -> dict[str, Any]:
         for k in ("brightness", "contrast", "saturation", "sharpness", "quality")
     }
     semantic = semantic_analyze(path)
+    semantic_windows = []
+    boundaries = [0.0] + changes
+    try:
+        total_duration = float(ffprobe_duration(path))
+    except Exception:
+        total_duration = len(frames) / sample_fps
+    boundaries.append(max(boundaries[-1], total_duration))
+    if semantic.get("enabled"):
+        for index in range(len(boundaries) - 1):
+            start, end = boundaries[index], boundaries[index + 1]
+            if end - start >= 0.5:
+                window = semantic_analyze_window(path, start, end, max_frames=6)
+                window["shot_index"] = index
+                semantic_windows.append(window)
     return {
         "sample_count": len(frames),
         "sample_fps": sample_fps,
@@ -101,6 +120,7 @@ def analyze_video(path: Path) -> dict[str, Any]:
         "scenes": len(changes) + 1,
         "features": avg,
         "semantic": semantic,
+        "semantic_windows": semantic_windows,
     }
 
 
