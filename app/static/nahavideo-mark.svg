@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>NahaVideo</title>
+  <rect width="64" height="64" rx="16" fill="#0b0f12"/>
+  <path d="M16 17v30M48 17v30M16 17l16 30L48 17" fill="none" stroke="#e0733d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M25 38.5 39.5 32 25 25.5z" fill="#f4eee7"/>
+</svg>
