@@ -72,13 +72,13 @@ async def production_guard(request: Request, call_next):
     if is_api:
         _request_metrics["api_requests"] += 1
         protected = (
-            request.method not in {"GET", "HEAD", "OPTIONS"}
-            and any(path.startswith(prefix) for prefix in {
+            any(path.startswith(prefix) for prefix in {
                 "/api/upload", "/api/plan", "/api/render", "/api/variants",
                 "/api/projects", "/api/stock-scout", "/api/asset-scout",
-                "/api/cobalt", "/api/assets",
+                "/api/cobalt", "/api/assets", "/api/brief-from-url",
+                "/api/runtime",
             })
-            and path not in {"/api/login", "/api/auth/status"}
+            and path not in {"/api/login", "/api/auth/status", "/api/health", "/api/ready"}
         )
         if protected and auth_enabled() and not valid_session(request.cookies.get("nahavideo_session")):
             return JSONResponse(
