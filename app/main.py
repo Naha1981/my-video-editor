@@ -2,7 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 import shutil
 
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -18,12 +18,13 @@ from .beats import detect_beats
 from .pacing import align_cut_boundaries
 from .motion import render_brand_card
 from .stock_search import build_stock_manifest
+from .stock_ingest import register_stock_asset, enrich_analysis_with_stock, stock_public
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "media"
 MEDIA.mkdir(exist_ok=True)
 
-app = FastAPI(title="NahaVideo AI Director", version="0.14.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.17.0")
 
 
 class PlanRequest(BaseModel):
@@ -34,6 +35,7 @@ class PlanRequest(BaseModel):
     logo_id: str | None = None
     creative_direction: dict | None = None
     creative_brief: dict | None = None
+    stock_asset_ids: list[str] = []
 
 
 class RenderRequest(BaseModel):
@@ -56,7 +58,13 @@ def _find_media(mid: str):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "product": "NahaVideo AI Director", "version": "0.14.0", "motion_engine": "injected-or-ffmpeg-fallback"}
+    return {
+        "ok": True,
+        "product": "NahaVideo AI Director",
+        "version": "0.17.0",
+        "motion_engine": "injected-or-ffmpeg-fallback",
+        "stock_ingestion": "provenance-aware-upload",
+    }
 
 
 @app.post("/api/brief-from-url")
@@ -96,6 +104,44 @@ async def upload(files: list[UploadFile] = File(...)):
     return results
 
 
+@app.post("/api/upload-stock")
+async def upload_stock(
+    file: UploadFile = File(...),
+    beat: str = Form(""),
+    intent: str = Form("cta"),
+    provider: str = Form(""),
+    source_url: str = Form(""),
+    license_name: str = Form(""),
+    attribution: str = Form(""),
+    approved: bool = Form(False),
+):
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in {".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"}:
+        raise HTTPException(400, f"Unsupported stock video type: {suffix}")
+    sid = uuid4().hex[:12]
+    path = MEDIA / f"{sid}{suffix}"
+    with path.open("wb") as out:
+        shutil.copyfileobj(file.file, out)
+    try:
+        meta = ffprobe(path)
+        register_stock_asset(
+            path,
+            beat=beat or intent,
+            intent=intent,
+            provider=provider,
+            source_url=source_url,
+            license_name=license_name,
+            attribution=attribution,
+            approved=approved,
+        )
+        analysis = enrich_analysis_with_stock(analyze_media(path), path)
+    except Exception as e:
+        path.unlink(missing_ok=True)
+        path.with_suffix(path.suffix + ".stock.json").unlink(missing_ok=True)
+        raise HTTPException(400, str(e))
+    return stock_public(sid, file.filename or path.name, path, meta, analysis)
+
+
 @app.post("/api/upload-music")
 async def upload_music(file: UploadFile = File(...)):
     suffix = Path(file.filename or "").suffix.lower()
@@ -127,13 +173,14 @@ async def upload_logo(file: UploadFile = File(...)):
 
 @app.post("/api/plan")
 def plan(req: PlanRequest):
+    requested_ids = list(dict.fromkeys(req.clip_ids + req.stock_asset_ids))
     clips = []
-    for cid in req.clip_ids:
+    for cid in requested_ids:
         path = _find_media(cid)
         if not path:
             raise HTTPException(404, f"Clip not found: {cid}")
         meta = ffprobe(path)
-        analysis = analyze_media(path)
+        analysis = enrich_analysis_with_stock(analyze_media(path), path)
         clips.append(Clip(
             cid, path.name, str(path), meta["duration"], meta["width"],
             meta["height"], meta["fps"], analysis
@@ -155,7 +202,7 @@ def plan(req: PlanRequest):
                 tolerance=0.28,
             )
             result["pacing_decisions"] = pacing_decisions
-            result = sanitize_plan(result, set(req.clip_ids), float(req.duration))
+            result = sanitize_plan(result, set(requested_ids), float(req.duration))
         else:
             result["pacing_decisions"] = []
     else:
@@ -170,6 +217,15 @@ def plan(req: PlanRequest):
         [{"filename": c.filename, "analysis": c.analysis or {}} for c in clips],
     )
     result["stock_manifest"] = build_stock_manifest(result["footage_gaps"].get("gaps", []))
+    result["stock_assets"] = [
+        {
+            "id": c.id,
+            "filename": c.filename,
+            **((c.analysis or {}).get("stock") or {}),
+        }
+        for c in clips
+        if ((c.analysis or {}).get("stock") or {}).get("kind") == "stock"
+    ]
     return result
 
 
