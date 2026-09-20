@@ -51,8 +51,18 @@ class BriefRequest(BaseModel):
     prompt: str = ""
 
 
+MEDIA_SUFFIXES = {
+    ".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv",
+    ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
+    ".png", ".jpg", ".jpeg", ".webp",
+}
+
+
 def _find_media(mid: str):
-    matches = list(MEDIA.glob(f"{mid}.*"))
+    matches = [
+        path for path in MEDIA.glob(f"{mid}.*")
+        if path.suffix.lower() in MEDIA_SUFFIXES
+    ]
     return matches[0] if matches else None
 
 
