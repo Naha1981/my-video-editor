@@ -62,3 +62,26 @@ def enrich_caption(cap: dict[str, Any]) -> dict[str, Any]:
     out["emphasis"] = emphasis
     out["style"] = caption_style(out.get("text", ""), emphasis)
     return out
+
+
+def caption_rhythm(caption: dict[str, Any], *, beat_times: list[float] | None = None, creative_intent: str | None = None) -> dict[str, Any]:
+    """Attach timing/rhythm guidance without changing the spoken words."""
+    out = dict(caption)
+    start=float(out.get("start",0) or 0); end=float(out.get("end",start) or start)
+    duration=max(0.0,end-start)
+    beats=sorted(float(x) for x in (beat_times or []) if float(x)>=0)
+    nearest=min((abs(b-start), b) for b in beats) if beats else (999.0,None)
+    style=str(out.get("style","normal"))
+    intent=str(creative_intent or "")
+    # Commercial hooks and hero statements deserve a little breathing room.
+    if style=="hero" or intent in {"hero_food","cta"}:
+        rhythm="accent"
+    elif nearest[0] <= 0.16:
+        rhythm="beat"
+    elif duration < 0.75:
+        rhythm="quick"
+    else:
+        rhythm="steady"
+    out["rhythm"]=rhythm
+    out["beat_distance"]=round(float(nearest[0]),3) if nearest[1] is not None else None
+    return out
