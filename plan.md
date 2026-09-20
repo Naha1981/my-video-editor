@@ -208,3 +208,10 @@ NahaVideo Web Service
 - Existing renderer, Director, provenance model and feature-flag fallback remain intact.
 
 - Auto-collected stock can be previewed and approved in place; no download/re-upload step is required.
+
+
+## v0.23 — Customer-first production flow
+- Added a one-click production workflow so the normal customer path is upload footage → optional website → describe outcome → Create video.
+- The application now orchestrates website understanding, creative direction, footage-gap analysis, optional automatic stock scouting, and delivery rendering behind the simplified UI.
+- The advanced Director, stock provenance and editable timeline controls remain available without being required for normal operation.
+- Automatic stock remains pending until an operator confirms provenance/license; the base draft can render without blocking on that approval.
