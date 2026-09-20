@@ -27,7 +27,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <main>
 <div class="top">
   <div><div class="brand">NAHAVIDEO / AI DIRECTOR</div><div class="tag">Local-first creative editing engine</div></div>
-  <div class="muted">v0.9</div>
+  <div class="muted">v0.17</div>
 </div>
 
 <div class="grid">
@@ -57,7 +57,24 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 <section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><div id="gaps" class="clips"></div></section>
 
 <section class="panel wide">
-  <h2>6. Editable timeline</h2>
+  <h2>6. Attach stock footage</h2>
+  <div class="metric">Download the selected stock clip yourself, then attach it here with its source/provenance. Approved stock can fill the matching creative intent automatically.</div>
+  <div class="grid" style="margin-top:10px">
+    <input id="stockFile" type="file" accept="video/*">
+    <select id="stockIntent"><option value="cta">CTA</option><option value="hero_food">Hero food</option><option value="craft">Craft</option><option value="experience">Experience</option><option value="proof">Proof</option><option value="problem">Problem</option><option value="result">Result</option></select>
+    <input id="stockProvider" placeholder="Provider e.g. Pexels">
+    <input id="stockUrl" placeholder="Source URL">
+    <input id="stockLicense" placeholder="License e.g. Pexels">
+    <input id="stockAttribution" placeholder="Attribution / creator">
+  </div>
+  <label class="metric" style="display:block;margin-top:8px"><input id="stockApproved" type="checkbox" style="width:auto"> I have checked the source/license and approve this asset for the edit.</label>
+  <button class="secondary" onclick="uploadStock()">Attach stock clip</button>
+  <div id="stockStatus" class="status"></div>
+  <div id="stockAssets" class="clips"></div>
+</section>
+
+<section class="panel wide">
+  <h2>7. Editable timeline</h2>
   <div id="timeline" class="timeline"></div>
   <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4 with FFmpeg</button>
   <div id="result" class="status"></div>
@@ -66,28 +83,51 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 </main>
 
 <script>
-let clips=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null;
+let clips=[],stockAssets=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null;
 const $=id=>document.getElementById(id);
 const fmt=s=>Number(s).toFixed(1)+'s';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+function renderClipList(){
+  $('clips').innerHTML=clips.map(c=>{
+    const a=c.analysis||{},sem=a.semantic||{},tr=a.transcript||{},stock=a.kind==='stock';
+    const ai=sem.available?'vision AI ON':'vision heuristics';
+    const whisper=tr.available?'Whisper ON':'speech adapter '+(tr.reason||'off');
+    return '<div class="clip"><div class="clipTop"><b>'+esc(c.filename)+'</b><span class="badge '+(stock?'ai':sem.available?'ai':'')+'">'+esc(stock?'APPROVED STOCK':'')+(stock?' · '+esc(c.intent||''):' '+esc(ai))+'</span></div>'+
+      '<div class="muted">'+fmt(c.duration)+' · '+c.width+'×'+c.height+(stock?' · '+esc(c.provider||'stock'):' · '+(a.scenes||1)+' scenes · '+((a.audio?.silence_ratio*100)||0).toFixed(0)+'% audio silence')+'</div>'+
+      '<div class="pills"><span class="pill">'+esc(stock?(c.provenance_status||'pending'):whisper)+'</span><span class="pill">'+(stock?esc(c.license_name||'license not stated'):'visual '+Math.round(a.visual_score||50)+'/100')+'</span>'+
+      (!stock?((sem.top_labels||[]).slice(0,2).map(x=>'<span class="pill">'+esc(x.label)+' '+Math.round(x.confidence*100)+'%</span>').join('')):'')+'</div></div>'
+  }).join('');
+}
 async function upload(){
   const fs=[...$('files').files];if(!fs.length)return;
   $('status').textContent='Uploading, analysing frames/audio and checking local AI adapters…';
   const fd=new FormData();fs.forEach(f=>fd.append('files',f));
   const r=await fetch('/api/upload',{method:'POST',body:fd});const data=await r.json();
   if(!r.ok){$('status').textContent=data.detail||JSON.stringify(data);return}
-  clips=data;
-  $('clips').innerHTML=clips.map(c=>{
-    const a=c.analysis||{},sem=a.semantic||{},tr=a.transcript||{};
-    const ai=sem.available?'vision AI ON':'vision heuristics';
-    const whisper=tr.available?'Whisper ON':'speech adapter '+(tr.reason||'off');
-    return '<div class="clip"><div class="clipTop"><b>'+esc(c.filename)+'</b><span class="badge '+(sem.available?'ai':'')+'">'+esc(ai)+'</span></div>'+
-      '<div class="muted">'+fmt(c.duration)+' · '+c.width+'×'+c.height+' · '+(a.scenes||1)+' scenes · '+((a.audio?.silence_ratio*100)||0).toFixed(0)+'% audio silence</div>'+
-      '<div class="pills"><span class="pill">'+esc(whisper)+'</span><span class="pill">visual '+Math.round(a.visual_score||50)+'/100</span>'+
-      ((sem.top_labels||[]).slice(0,2).map(x=>'<span class="pill">'+esc(x.label)+' '+Math.round(x.confidence*100)+'%</span>').join(''))+'</div></div>'
-  }).join('');
+  clips=data.filter(x=>x.kind!=='stock'); renderClipList();
   $('planBtn').disabled=false;$('status').textContent=clips.length+' clip(s) ready.';
+}
+async function uploadStock(){
+  const file=$('stockFile').files[0]; if(!file)return;
+  $('stockStatus').textContent='Attaching stock and analysing it…';
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('intent',$('stockIntent').value);
+  fd.append('beat',$('stockIntent').value);
+  fd.append('provider',$('stockProvider').value);
+  fd.append('source_url',$('stockUrl').value);
+  fd.append('license_name',$('stockLicense').value);
+  fd.append('attribution',$('stockAttribution').value);
+  fd.append('approved',$('stockApproved').checked?'true':'false');
+  const r=await fetch('/api/upload-stock',{method:'POST',body:fd});const data=await r.json();
+  if(!r.ok){$('stockStatus').textContent=data.detail||JSON.stringify(data);return}
+  stockAssets.push(data);clips.push(data);renderClipList();renderStockAssets();
+  $('planBtn').disabled=false;
+  $('stockStatus').textContent=(data.approved?'Approved':'Pending')+' stock attached. Rebuild the AI edit plan to use it.';
+}
+function renderStockAssets(){
+  $('stockAssets').innerHTML=stockAssets.map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge '+(x.approved?'ai':'')+'">'+esc(x.provenance_status||'pending')+'</span></div><div class="muted">'+esc(x.intent)+' · '+esc(x.provider||'provider not stated')+' · '+esc(x.license_name||'license not stated')+'</div></div>').join('');
 }
 
 async function loadBrief(){
@@ -130,7 +170,12 @@ async function makePlan(){
   $('status').textContent='Director is building the edit decision graph…';
   musicId=await uploadMusic();logoId=await uploadLogo();
   const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({prompt:$('prompt').value,duration:30,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief})});
+    body:JSON.stringify({
+      prompt:$('prompt').value,duration:30,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id),
+      stock_asset_ids:stockAssets.filter(c=>c.approved).map(c=>c.id),
+      music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief
+    })});
   plan=await r.json();if(!r.ok){$('status').textContent=plan.detail||JSON.stringify(plan);return}
   renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
   const chosen=plan.creative_direction?.selected;
@@ -149,7 +194,12 @@ function renderPlan(){
     $('gapsSummary').textContent=gd.gap_count
       ? gd.gap_count+' footage gap(s) detected · '+gd.required_gap_count+' required'
       : 'All required/supporting creative beats have suitable coverage.';
-    $('gaps').innerHTML=(gd.gaps||[]).map(g=>'<div class="clip"><div class="clipTop"><b>'+esc(g.priority.toUpperCase())+' · '+esc(g.beat)+'</b><span class="badge">'+esc(g.status)+'</span></div><div class="muted">'+esc(g.need)+'</div><div class="metric">Search: '+esc(g.search_hint)+' · intent fit '+Math.round(g.intent_fit*100)+'%</div></div>').join('');
+    const jobs=plan.stock_manifest?.jobs||[];
+    $('gaps').innerHTML=(gd.gaps||[]).map(g=>{
+      const job=jobs.find(j=>j.intent===g.intent);
+      const links=(job?.providers||[]).map(p=>'<a href="'+esc(p.url)+'" target="_blank" rel="noreferrer">'+esc(p.name)+'</a>').join(' · ');
+      return '<div class="clip"><div class="clipTop"><b>'+esc(g.priority.toUpperCase())+' · '+esc(g.beat)+'</b><span class="badge">'+esc(g.status)+'</span></div><div class="muted">'+esc(g.need)+'</div><div class="metric">Search: '+esc(g.search_hint)+' · intent fit '+Math.round(g.intent_fit*100)+'%'+(links?' · '+links:'')+'</div></div>'
+    }).join('');
   }
   $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">intent: '+esc(b.creative_intent||'')+' · '+esc(b.purpose||'')+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
@@ -197,7 +247,11 @@ async function renderVideo(){
   if(!plan)return;
   $('result').textContent='Rendering…';
   const r=await fetch('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({plan,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId})});
+    body:JSON.stringify({
+      plan,
+      clip_ids:clips.filter(c=>c.kind!=='stock').map(c=>c.id).concat(stockAssets.filter(c=>c.approved).map(c=>c.id)),
+      music_id:musicId,logo_id:logoId
+    })});
   const data=await r.json();if(!r.ok){$('result').textContent=data.detail||JSON.stringify(data);return}
   $('result').innerHTML='<span class="success">Render complete.</span> <a href="'+data.download+'">Download MP4</a>';
 }
