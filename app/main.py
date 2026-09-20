@@ -60,7 +60,7 @@ RATE_LIMIT_PER_MINUTE = env_int("NAHAVIDEO_RATE_LIMIT_PER_MINUTE", 120, maximum=
 _rate_buckets: dict[str, list[float]] = {}
 _request_metrics = {"requests": 0, "api_requests": 0, "errors": 0, "renders": 0}
 
-app = FastAPI(title="NahaVideo AI Director", version="0.41.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.43.0")
 
 @app.middleware("http")
 async def production_guard(request: Request, call_next):
@@ -214,6 +214,11 @@ class ProjectRequest(BaseModel):
     music_id: str | None = None
     logo_id: str | None = None
     platforms: list[str] = []
+    clips: list[dict] = []
+    stock_assets: list[dict] = []
+    creative_brief: dict | None = None
+    creative_direction: dict | None = None
+    command: str = ""
 
 
 @app.get("/api/ready")
