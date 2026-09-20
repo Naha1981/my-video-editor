@@ -164,3 +164,13 @@ The website intake is intentionally deterministic and local-first. It does not c
 - The NahaLabs Authenticity profile carries South African realism, natural people, local environments and believable imperfections as production constraints.
 - The context also exposes two reusable loops: Find → Understand → Act → Learn for system narratives, and Content → Distribution → Leads → Sales → Revenue → Analytics for growth workflows.
 - The context is surfaced in the Director UI and can later be reused by website, advertising and broader Creative Growth OS tooling.
+
+
+## v0.20 — Multi-platform Delivery Packs
+- Added normalized delivery destinations for Reels, TikTok, YouTube Shorts, YouTube, LinkedIn, Facebook, X and Podcast.
+- One NahaVideo edit decision graph now drives multiple platform outputs instead of rebuilding the creative for each destination.
+- When ffmpeg-skill is installed, the delivery pack uses its platform templates and structured output workflow.
+- When ffmpeg-skill is unavailable, NahaVideo keeps the native FFmpeg base render and reports the fallback explicitly.
+- The API exposes a delivery-pack plan, base render and platform-specific download routes.
+- The UI now lets the operator select delivery destinations and render a platform pack.
+- Platform QA remains tied to the final output rather than assuming that a successful FFmpeg command means the asset is valid.
