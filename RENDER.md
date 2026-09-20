@@ -129,3 +129,8 @@ The Jev worker runs Chromium and Browser Harness and should be treated as a sepa
 ## Production profile
 
 The root render.yaml now defines the production service: paid Starter compute, a 10 GB persistent disk at /var/data, HTTP readiness at /api/ready, 300-second graceful shutdown and CI-gated auto-deploys. Render documents persistent disks as the mechanism for preserving service filesystem changes across deploys/restarts, and HTTP health checks as application-level readiness checks. citeturn250335search1turn250335search3turn217056view0
+
+
+## Optional operator authentication
+
+Set `NAHAVIDEO_AUTH_PASSWORD` and `NAHAVIDEO_AUTH_SECRET` as Render secrets to turn on the editor/API operator sign-in gate. Leave them unset for the public demo mode. The secret is used only to sign short-lived session cookies; the password is never returned by the API.
