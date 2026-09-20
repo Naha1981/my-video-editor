@@ -57,6 +57,8 @@ def _write_ass(path: Path, captions: list[dict[str, Any]], zone: dict[str, Any],
         if not text or end<=start: continue
         emphasis={str(x).lower() for x in item.get("emphasis",[])}
         style=str(item.get("style","normal"))
+        rhythm=str(item.get("rhythm","steady"))
+        fade_ms = 180 if style == "hero" else (120 if rhythm == "beat" else 80)
         words=text.split()
         rendered=[]
         for word in words:
@@ -66,7 +68,9 @@ def _write_ass(path: Path, captions: list[dict[str, Any]], zone: dict[str, Any],
                 rendered.append(r"{\b1\fs%d}%s{\b0\fs%d}" % (size, word, zone["font_size"]))
             else:
                 rendered.append(word)
-        local.append((_ass_ts(start),_ass_ts(end)," ".join(rendered)))
+        line_text=" ".join(rendered)
+        line_text=r"{\\fad(%d,%d)}%s" % (fade_ms, fade_ms, line_text)
+        local.append((_ass_ts(start),_ass_ts(end),line_text))
     if not local: return None
     path.write_text(
         "[Script Info]\\nScriptType: v4.00+\\nPlayResX: 1920\\nPlayResY: 1080\\n"
