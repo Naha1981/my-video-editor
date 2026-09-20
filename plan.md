@@ -174,3 +174,25 @@ The website intake is intentionally deterministic and local-first. It does not c
 - The API exposes a delivery-pack plan, base render and platform-specific download routes.
 - The UI now lets the operator select delivery destinations and render a platform pack.
 - Platform QA remains tied to the final output rather than assuming that a successful FFmpeg command means the asset is valid.
+
+
+## v0.21 — NahaLabs Browser Asset Scout + NahaLLM
+- Added an isolated NahaLLM client using the OpenAI-compatible gateway without adding provider-specific credentials to NahaVideo.
+- Added an isolated Jev browser adapter with feature flag, URL validation, domain allowlist support, timeouts and structured mission results.
+- Added a separate Jev Browser Worker container so Chromium/Browser Harness is never a hard dependency of the NahaVideo renderer.
+- Added NahaLLM mission compilation with deterministic fallback when NahaLLM is disabled or unavailable.
+- Added a first application mission: website asset scouting for business name, contact/CTA, booking/order routes, public brand images and useful pages.
+- Added structured browser evidence with source URL, observation time and verification labels; raw model output is not treated as verified business data.
+- Added a NahaLabs Asset Scout UI action so an operator can request asset collection instead of manually hunting through client websites.
+- Jev remains the browser execution component; NahaVideo remains responsible for business/creative logic, validation and rendering.
+- Jev's current TypeSafe operation/target model remains intact. NahaLLM can serve as its field-text helper and evidence interpretation layer through configuration.
+- Added SSRF/private-network protections, worker API authentication, step/time budgets, and failure isolation.
+- Existing application functionality remains the source of truth when `NAHALLM_ENABLED=0` and `JEV_ENABLED=0`.
+
+### v0.21 Deployment shape
+```
+NahaVideo Web Service
+    ├── existing Creative Director / media pipeline
+    ├── optional NahaLLM client ──> NahaLLM Web Service
+    └── optional Jev client ──────> Jev Browser Worker ──> Chromium / Browser Harness
+```
