@@ -54,8 +54,10 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 
 <section class="panel wide"><h2>4. AI story sequence</h2><div class="metric">The Director orders footage by creative intent: hook → build → proof → CTA.</div><div id="storyboard" class="clips"></div></section>
 
+<section class="panel wide"><h2>5. Footage gaps</h2><div id="gapsSummary" class="metric">Build a plan to check whether required footage exists.</div><div id="gaps" class="clips"></div></section>
+
 <section class="panel wide">
-  <h2>5. Editable timeline</h2>
+  <h2>6. Editable timeline</h2>
   <div id="timeline" class="timeline"></div>
   <button id="renderBtn" onclick="renderVideo()" disabled>Render MP4 with FFmpeg</button>
   <div id="result" class="status"></div>
@@ -64,7 +66,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
 </main>
 
 <script>
-let clips=[],plan=null,musicId=null,logoId=null,creativeDirection=null;
+let clips=[],plan=null,musicId=null,logoId=null,creativeDirection=null,creativeBrief=null;
 const $=id=>document.getElementById(id);
 const fmt=s=>Number(s).toFixed(1)+'s';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -94,6 +96,7 @@ async function loadBrief(){
   const r=await fetch('/api/brief-from-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,prompt:$('prompt').value})});
   const data=await r.json(); if(!r.ok){$('briefStatus').textContent=data.detail||'Website intake failed';return}
   const b=data.creative_brief;
+  creativeBrief=b;
   creativeDirection=b.direction||null;
   renderConcepts();
   $('briefSummary').textContent=b.business_name+' · '+b.category+' · CTA: '+b.cta+' · '+b.tone;
@@ -127,7 +130,7 @@ async function makePlan(){
   $('status').textContent='Director is building the edit decision graph…';
   musicId=await uploadMusic();logoId=await uploadLogo();
   const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({prompt:$('prompt').value,duration:30,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId,creative_direction:creativeDirection})});
+    body:JSON.stringify({prompt:$('prompt').value,duration:30,clip_ids:clips.map(c=>c.id),music_id:musicId,logo_id:logoId,creative_direction:creativeDirection,creative_brief:creativeBrief})});
   plan=await r.json();if(!r.ok){$('status').textContent=plan.detail||JSON.stringify(plan);return}
   renderPlan();$('status').textContent='Plan ready · '+plan.timeline.length+' timeline elements · '+plan.audio.duck_mode;
   const chosen=plan.creative_direction?.selected;
@@ -140,6 +143,13 @@ function renderPlan(){
   if(chosen){
     $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
     $('briefSummary').textContent=chosen.promise+' Proof: '+chosen.proof+' CTA: '+chosen.cta;
+  }
+  const gd=plan.footage_gaps;
+  if(gd){
+    $('gapsSummary').textContent=gd.gap_count
+      ? gd.gap_count+' footage gap(s) detected · '+gd.required_gap_count+' required'
+      : 'All required/supporting creative beats have suitable coverage.';
+    $('gaps').innerHTML=(gd.gaps||[]).map(g=>'<div class="clip"><div class="clipTop"><b>'+esc(g.priority.toUpperCase())+' · '+esc(g.beat)+'</b><span class="badge">'+esc(g.status)+'</span></div><div class="muted">'+esc(g.need)+'</div><div class="metric">Search: '+esc(g.search_hint)+' · intent fit '+Math.round(g.intent_fit*100)+'%</div></div>').join('');
   }
   $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">intent: '+esc(b.creative_intent||'')+' · '+esc(b.purpose||'')+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
