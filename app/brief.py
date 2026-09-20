@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
 
+from .security import validate_public_url
+
 
 class _MetaParser(HTMLParser):
     def __init__(self):
@@ -23,7 +25,8 @@ class _MetaParser(HTMLParser):
 
 
 def fetch_brand(url: str, timeout: int = 12) -> dict:
-    parsed=urlparse(url if "://" in url else "https://"+url)
+    safe_url=validate_public_url(url, label="website URL")
+    parsed=urlparse(safe_url)
     if parsed.scheme not in {"http","https"} or not parsed.netloc:
         raise ValueError("Enter a valid http(s) website URL")
     target=parsed.geturl()
