@@ -92,3 +92,25 @@ def normalize_candidates(source_url: str, response: dict) -> list[dict]:
             for tunnel in response.get("tunnel", [])
         ]
     return []
+
+
+def cobalt_host() -> str:
+    from urllib.parse import urlparse
+    return urlparse(_api_url()).hostname or ""
+
+
+def candidate_download_allowed(url: str) -> bool:
+    """Only permit candidate downloads from the configured Cobalt host or explicit allowlist."""
+    from urllib.parse import urlparse
+    host = (urlparse(url).hostname or "").lower().rstrip(".")
+    if not host:
+        return False
+    configured_hosts = {
+        cobalt_host().lower().rstrip("."),
+        *{
+            item.strip().lower().lstrip(".").rstrip(".")
+            for item in os.getenv("NAHAVIDEO_COBALT_DOWNLOAD_DOMAINS", "").split(",")
+            if item.strip()
+        },
+    }
+    return host in configured_hosts or any(host.endswith("." + item) for item in configured_hosts if item)
