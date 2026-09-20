@@ -125,7 +125,12 @@ async function makePlan(){
 }
 
 function renderPlan(){
-  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div></div>').join('');
+  const chosen=plan.creative_direction?.selected;
+  if(chosen){
+    $('briefStatus').textContent='Creative Director: '+chosen.name+' — '+chosen.hook;
+    $('briefSummary').textContent=chosen.promise+' Proof: '+chosen.proof+' CTA: '+chosen.cta;
+  }
+  $('storyboard').innerHTML=(plan.storyboard||[]).map(b=>'<div class="clip"><div class="clipTop"><b>'+esc(b.type.toUpperCase())+'</b><span class="badge">'+esc(b.transition)+'</span></div><div class="muted">'+esc(b.visual)+' · '+fmt(b.duration)+'</div><div class="metric">intent: '+esc(b.creative_intent||'')+' · '+esc(b.purpose||'')+'</div></div>').join('');
   $('ranked').innerHTML=plan.shots_ranked.map((x,i)=>{
     const sem=x.analysis?.semantic?.top_labels||[],tr=x.analysis?.transcript||{};
     return '<div class="rank"><div class="score">'+x.score+'</div><div><b>'+(i+1)+'. '+esc(x.filename)+'</b>'+
@@ -136,7 +141,6 @@ function renderPlan(){
   renderTimeline();
   if(plan.captions?.length) $('status').textContent += ' · '+plan.captions.length+' caption cue(s) detected';
 }
-
 function renderTimeline(){
   $('timeline').innerHTML=plan.timeline.map((x,i)=>{
     const disabled=x.enabled===false;
