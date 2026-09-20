@@ -43,7 +43,7 @@ button:disabled{opacity:.5}.clips{display:grid;gap:8px;margin-top:12px}.clip{pad
   <textarea id="prompt">Create a 30-second premium restaurant advertisement. Start with the strongest food shot, remove dead time, keep the pacing energetic, lower the music under dialogue, and finish with the NahaLabs logo.</textarea>
   <div class="metric">NahaLabs command (optional)</div><input id="command" value="/lead-gen /reel /nahalabs-authentic" placeholder="/cargoiq /lead-gen /facebook-ad /nahalabs-authentic">
   <div id="nahaContext" class="pills"></div>
-  <div class="metric">Client website URL (optional)</div><input id="siteUrl" placeholder="https://client.co.za"><button class="secondary" onclick="loadBrief()">Understand website</button><div id="briefStatus" class="status"></div><div id="concepts" class="pills"></div><div id="briefSummary" class="metric"></div><div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
+  <div class="metric">Client website URL (optional)</div><input id="siteUrl" placeholder="https://client.co.za"><button class="secondary" onclick="loadBrief()">Understand website</button><div class="metric" style="margin-top:8px">Browser task for NahaLabs Asset Scout (optional)</div><input id="browserTask" placeholder="Collect logo, hero images, menu/services, phone, WhatsApp, booking/order links, and useful brand pages"><button class="secondary" onclick="scoutAssets()">Run NahaLabs Asset Scout</button><div id="assetScoutStatus" class="status"></div><div id="assetScoutResults" class="clips"></div><div id="briefStatus" class="status"></div><div id="concepts" class="pills"></div><div id="briefSummary" class="metric"></div><div class="metric">Optional background music</div><input id="music" type="file" accept="audio/*">
   <div class="metric" style="margin-top:10px">Optional NahaLabs logo</div><input id="logo" type="file" accept="image/png,image/jpeg,image/webp">
   <button id="planBtn" onclick="makePlan()" disabled>Build AI edit plan</button>
   <div id="status" class="status"></div>
@@ -143,6 +143,22 @@ function renderStockAssets(){
   $('stockAssets').innerHTML=stockAssets.map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.filename)+'</b><span class="badge '+(x.approved?'ai':'')+'">'+esc(x.provenance_status||'pending')+'</span></div><div class="muted">'+esc(x.intent)+' · '+esc(x.provider||'provider not stated')+' · '+esc(x.license_name||'license not stated')+'</div></div>').join('');
 }
 
+async function scoutAssets(){
+  const url=$('siteUrl').value.trim(); if(!url)return;
+  $('assetScoutStatus').textContent='NahaLabs is compiling the browser mission and scouting the site…';
+  const r=await fetch('/api/asset-scout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,task:$('browserTask').value})});
+  const data=await r.json();
+  if(!r.ok){$('assetScoutStatus').textContent=data.detail||'Asset scout failed';return}
+  if(data.status==='disabled'){
+    $('assetScoutStatus').textContent=data.message||'Asset Scout is disabled.';
+    return;
+  }
+  const obs=data.observations?.length||0, assets=data.assets?.length||0;
+  $('assetScoutStatus').textContent='Asset Scout: '+esc(data.status||'completed')+' · '+obs+' observation(s) · '+assets+' asset/link candidate(s).';
+  $('assetScoutResults').innerHTML=(data.assets||[]).slice(0,30).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.kind||'asset')+'</b></div><div class="muted">'+esc(x.url||'')+'</div></div>').join('');
+  if(data.errors?.length) $('assetScoutStatus').textContent += ' · '+esc(data.errors[0]);
+}
+
 async function loadBrief(){
   const url=$('siteUrl').value.trim(); if(!url)return;
   $('briefStatus').textContent='Reading website metadata and visible text locally…';
@@ -153,6 +169,7 @@ async function loadBrief(){
   creativeDirection=b.direction||null;
   renderConcepts();
   $('briefSummary').textContent=b.business_name+' · '+b.category+' · CTA: '+b.cta+' · '+b.tone;
+  if(b.asset_scout){ const s=b.asset_scout; $('assetScoutStatus').textContent='Automatic Asset Scout: '+(s.status||'ready')+' · '+((s.assets||[]).length)+' asset/link candidate(s).'; $('assetScoutResults').innerHTML=(s.assets||[]).slice(0,30).map(x=>'<div class="clip"><div class="clipTop"><b>'+esc(x.kind||'asset')+'</b></div><div class="muted">'+esc(x.url||'')+'</div></div>').join(''); }
   $('prompt').value='Create a '+b.tone+' '+b.category+' advertisement. Offer: '+b.offer+'. Audience: '+b.audience+'. CTA: '+b.cta+'. Use '+b.visual_keywords.join(', ')+'. Remove dead time, keep the pacing engaging, and finish with the brand.';
   $('briefStatus').textContent='Brand brief ready. Director prompt updated.';
 }
