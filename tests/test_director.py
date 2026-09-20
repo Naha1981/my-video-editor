@@ -207,3 +207,14 @@ def test_story_sequence_falls_back_when_required_cta_has_no_semantic_match():
     )
     assert timeline[0]["creative_intent"] == "hero_food"
     assert any(d["intent"] == "cta" and d["status"] == "unfilled" for d in decisions)
+
+
+def test_storyboard_uses_timeline_creative_intent():
+    from app.storyboard import build_storyboard
+    plan = {"creative_direction": {"selected": {"shot_sequence": ["hero_food", "cta"]}}, "timeline": [
+        {"id": "cut_1", "type": "clip", "enabled": True, "filename": "dish.mp4", "creative_intent": "hero_food", "intent_fit": 0.91, "score": 88, "duration": 2.5, "reasons": []},
+        {"id": "cut_2", "type": "clip", "enabled": True, "filename": "store.mp4", "creative_intent": "cta", "intent_fit": 0.84, "score": 81, "duration": 2.0, "reasons": []},
+    ]}
+    beats = build_storyboard(plan)
+    assert [b["creative_intent"] for b in beats] == ["hero_food", "cta"]
+    assert beats[1]["intent_fit"] == 0.84
