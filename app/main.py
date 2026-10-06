@@ -8,7 +8,7 @@ import time
 import shutil as _shutil
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -38,6 +38,8 @@ from .services.asset_scout import scout_website_assets
 from .services.asset_fetcher import collect_public_assets
 from .services.stock_scout import scout_missing_stock
 from .integrations.cobalt import configured as cobalt_configured, request_media, normalize_candidates, candidate_download_allowed, CobaltError
+from .idea_video import create_video_from_idea
+from .youtube import status as youtube_status, authorization_url as youtube_authorization_url, handle_callback as youtube_handle_callback, upload_video as youtube_upload_video
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_ROOT = Path("/var/data") if Path("/var/data").exists() else ROOT / "data"
@@ -61,7 +63,7 @@ RATE_LIMIT_PER_MINUTE = env_int("NAHAVIDEO_RATE_LIMIT_PER_MINUTE", 120, maximum=
 _rate_buckets: dict[str, list[float]] = {}
 _request_metrics = {"requests": 0, "api_requests": 0, "errors": 0, "renders": 0}
 
-app = FastAPI(title="NahaVideo AI Director", version="0.43.0")
+app = FastAPI(title="NahaVideo AI Director", version="0.44.0")
 
 @app.middleware("http")
 async def production_guard(request: Request, call_next):
@@ -76,9 +78,9 @@ async def production_guard(request: Request, call_next):
                 "/api/upload", "/api/plan", "/api/render", "/api/variants",
                 "/api/projects", "/api/stock-scout", "/api/asset-scout",
                 "/api/cobalt", "/api/assets", "/api/brief-from-url",
-                "/api/runtime",
+                "/api/runtime", "/api/studio", "/api/youtube",
             })
-            and path not in {"/api/login", "/api/auth/status", "/api/health", "/api/ready"}
+            and path not in {"/api/login", "/api/auth/status", "/api/health", "/api/ready", "/api/youtube/status", "/api/youtube/oauth/callback"}
         )
         if protected and auth_enabled() and not valid_session(request.cookies.get("nahavideo_session")):
             return JSONResponse(
@@ -336,7 +338,7 @@ def health():
     return {
         "ok": True,
         "product": "NahaVideo AI Director",
-        "version": "0.43.0",
+        "version": "0.44.0",
         "motion_engine": "injected-or-ffmpeg-fallback",
         "stock_ingestion": "provenance-aware-upload",
         "cobalt": {
@@ -838,6 +840,98 @@ def download_render(rid: str):
     if not path.exists():
         raise HTTPException(404, "Render not found")
     return FileResponse(path, media_type="video/mp4", filename=path.name)
+
+
+
+class StudioRequest(BaseModel):
+    idea: str
+    audience: str = ""
+    cta: str = ""
+    duration: int = 45
+    format: str = "youtube"
+    voice: str = "en-ZA-LeahNeural"
+
+
+class YouTubePublishRequest(BaseModel):
+    job_id: str
+    title: str
+    description: str = ""
+    tags: list[str] = []
+    privacy_status: str = "private"
+
+
+@app.post("/api/studio/generate")
+def studio_generate(req: StudioRequest):
+    try:
+        blueprint = create_video_from_idea(
+            req.idea, req.audience, req.cta, req.duration, req.format, req.voice
+        )
+        return {
+            "status": "ready",
+            "job_id": blueprint["job_id"],
+            "download": f"/api/studio/video/{blueprint['job_id']}",
+            "blueprint": blueprint,
+            "youtube": youtube_status(),
+        }
+    except Exception as exc:
+        logger.exception("idea_video_generation_failed")
+        raise HTTPException(500, f"Video production failed: {type(exc).__name__}: {exc}")
+
+
+@app.get("/api/studio/video/{job_id}")
+def studio_video(job_id: str):
+    if not re.fullmatch(r"[a-f0-9]{12}", job_id):
+        raise HTTPException(400, "Invalid job id")
+    path = DATA_ROOT / "studio" / job_id / "video.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Studio video not found")
+    return FileResponse(path, media_type="video/mp4", filename=f"nahavideo_{job_id}.mp4")
+
+
+@app.get("/api/youtube/status")
+def get_youtube_status():
+    return youtube_status()
+
+
+@app.get("/api/youtube/connect")
+def youtube_connect():
+    try:
+        return RedirectResponse(youtube_authorization_url(), status_code=307)
+    except Exception as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.get("/api/youtube/oauth/callback")
+def youtube_callback(code: str = "", state: str = "", error: str = ""):
+    if error:
+        return RedirectResponse("/studio.html?youtube=denied", status_code=303)
+    try:
+        youtube_handle_callback(code, state)
+        return RedirectResponse("/studio.html?youtube=connected", status_code=303)
+    except Exception as exc:
+        logger.exception("youtube_oauth_failed")
+        return RedirectResponse("/studio.html?youtube=error", status_code=303)
+
+
+@app.post("/api/youtube/publish")
+def youtube_publish(req: YouTubePublishRequest):
+    if not re.fullmatch(r"[a-f0-9]{12}", req.job_id):
+        raise HTTPException(400, "Invalid job id")
+    path = DATA_ROOT / "studio" / req.job_id / "video.mp4"
+    if not path.exists():
+        raise HTTPException(404, "Generated video not found")
+    try:
+        result = youtube_upload_video(
+            path,
+            req.title.strip(),
+            req.description.strip(),
+            req.tags,
+            req.privacy_status,
+        )
+        return result
+    except Exception as exc:
+        logger.exception("youtube_publish_failed")
+        raise HTTPException(400, str(exc))
 
 
 app.mount("/", StaticFiles(directory=str(ROOT / "app" / "static"), html=True), name="static")
